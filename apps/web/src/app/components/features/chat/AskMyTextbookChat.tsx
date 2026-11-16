@@ -228,28 +228,100 @@ export const CHAT_SYSTEM_PROMPT = [
 ].join(' ');
 
 /**
- * Convert markdown to HTML
- * Handles bold, italic, inline code, code blocks, and lists
+ * Escape characters so model text cannot add its own HTML.
  */
-function renderMarkdownToHtml(content: string): string {
-  let html = content
-    // Code blocks (must be before inline code)
-    .replace(/```sql\n([\s\S]*?)```/g, '<pre class="bg-gray-900 text-gray-100 p-2 rounded text-xs overflow-x-auto my-2 font-mono"><code>$1</code></pre>')
-    .replace(/```\n?([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-700 p-2 rounded text-xs overflow-x-auto my-2 font-mono"><code>$1</code></pre>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-gray-900 dark:text-gray-100">$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/_(.+?)_/g, '<em>$1</em>')
-    // Inline code
-    .replace(/`(.+?)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono text-pink-600">$1</code>')
-    // List items
-    .replace(/^\*\s+(.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    .replace(/^-\s+(.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-    // Convert remaining newlines to <br/>
-    .replace(/\n/g, '<br/>');
-  
-  return html;
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Inline formatting: bold, italic (asterisks only, so snake_case and ___ stay as typed) and inline code.
+ */
+function renderInlineMarkdown(text: string): string {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-xs font-mono text-pink-600 dark:text-pink-300">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-gray-900 dark:text-gray-100">$1</strong>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*(?!\*)/g, '$1<em>$2</em>');
+}
+
+/**
+ * Convert the model's markdown into clean block HTML:
+ * paragraphs, bullet and numbered lists, headings (shown as bold lines) and code blocks.
+ */
+export function renderMarkdownToHtml(content: string): string {
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const out: string[] = [];
+  let paragraph: string[] = [];
+  let list: { type: 'ul' | 'ol'; items: string[] } | null = null;
+  let code: string[] | null = null;
+
+  const flushParagraph = () => {
+    if (paragraph.length > 0) {
+      out.push(`<p class="mb-2 last:mb-0 leading-relaxed">${paragraph.map(renderInlineMarkdown).join('<br/>')}</p>`);
+      paragraph = [];
+    }
+  };
+  const flushList = () => {
+    if (list) {
+      const cls = list.type === 'ul' ? 'list-disc' : 'list-decimal';
+      out.push(
+        `<${list.type} class="${cls} pl-5 mb-2 space-y-1">${list.items.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</${list.type}>`
+      );
+      list = null;
+    }
+  };
+
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      if (code === null) {
+        flushParagraph();
+        flushList();
+        code = [];
+      } else {
+        out.push(
+          `<pre class="bg-gray-900 text-gray-100 p-2 rounded text-xs overflow-x-auto my-2 font-mono whitespace-pre"><code>${escapeHtml(code.join('\n'))}</code></pre>`
+        );
+        code = null;
+      }
+      continue;
+    }
+    if (code !== null) {
+      code.push(line);
+      continue;
+    }
+    if (!line.trim()) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+    const heading = line.match(/^\s*#{1,6}\s+(.+)$/);
+    if (heading) {
+      flushParagraph();
+      flushList();
+      out.push(`<p class="mb-1 font-semibold text-gray-900 dark:text-gray-100">${renderInlineMarkdown(heading[1])}</p>`);
+      continue;
+    }
+    const bullet = line.match(/^\s*[-*•]\s+(.+)$/);
+    const numbered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+    if (bullet || numbered) {
+      flushParagraph();
+      const type = bullet ? 'ul' : 'ol';
+      if (!list || list.type !== type) {
+        flushList();
+        list = { type, items: [] };
+      }
+      list.items.push((bullet ?? numbered)![1]);
+      continue;
+    }
+    flushList();
+    paragraph.push(line.trim());
+  }
+  if (code !== null) {
+    out.push(`<pre class="bg-gray-900 text-gray-100 p-2 rounded text-xs overflow-x-auto my-2 font-mono whitespace-pre"><code>${escapeHtml(code.join('\n'))}</code></pre>`);
+  }
+  flushParagraph();
+  flushList();
+  return out.join('');
 }
 
 /**
@@ -285,13 +357,13 @@ function ChatMessageBubble({ msg, idx, onSaveToNotes }: ChatMessageBubbleProps) 
     // Assistant messages - render markdown
     const html = renderMarkdownToHtml(msg.content);
     const sanitizedHtml = DOMPurify.sanitize(html, { 
-      ALLOWED_TAGS: ['strong', 'em', 'code', 'pre', 'li', 'br', 'span'],
+      ALLOWED_TAGS: ['strong', 'em', 'code', 'pre', 'p', 'ul', 'ol', 'li', 'br', 'span'],
       ALLOWED_ATTR: ['class']
     });
     
     return (
       <div 
-        className="whitespace-pre-wrap break-words prose prose-sm max-w-none text-gray-700 dark:text-gray-200"
+        className="break-words max-w-none text-gray-700 dark:text-gray-200"
         dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
       />
     );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAT_SYSTEM_PROMPT, deriveChatLearningSignals, findLastProblemError, rankUnitsForQuery } from './AskMyTextbookChat';
+import { CHAT_SYSTEM_PROMPT, deriveChatLearningSignals, findLastProblemError, rankUnitsForQuery, renderMarkdownToHtml } from './AskMyTextbookChat';
 import type { InteractionEvent } from '../../../types';
 
 describe('AskMyTextbookChat learning signals', () => {
@@ -94,5 +94,35 @@ describe('rankUnitsForQuery', () => {
   it('keeps the original order when nothing matches', () => {
     const ranked = rankUnitsForQuery(units, 'zzzz qqqq');
     expect(ranked).toBe(units);
+  });
+});
+
+
+describe('renderMarkdownToHtml', () => {
+  it('wraps bullet and numbered lists in real lists', () => {
+    const html = renderMarkdownToHtml('Steps:\n1. Look at the table\n2. Pick the column\n\n- one\n- two');
+    expect(html).toContain('<ol');
+    expect(html).toContain('<ul');
+    expect(html.match(/<li>/g)?.length).toBe(4);
+  });
+
+  it('keeps snake_case and ___ placeholders as typed', () => {
+    const html = renderMarkdownToHtml('Use employee_id and ___(name) here');
+    expect(html).toContain('employee_id');
+    expect(html).toContain('___(name)');
+    expect(html).not.toContain('<em>');
+  });
+
+  it('does not add extra line breaks inside code blocks and escapes HTML', () => {
+    const html = renderMarkdownToHtml('```sql\nSELECT a\nFROM t\n```\n<script>x</script>');
+    expect(html).toContain('SELECT a\nFROM t');
+    expect(html).not.toContain('<br/>');
+    expect(html).not.toContain('<script>');
+  });
+
+  it('turns headings into bold lines and **bold** into strong', () => {
+    const html = renderMarkdownToHtml('### Idea\nThis is **important**.');
+    expect(html).toContain('font-semibold');
+    expect(html).toContain('<strong');
   });
 });
