@@ -188,6 +188,34 @@ export function findLastProblemError(
  * Each request is independent (no chat memory), so off-topic questions must be
  * declined and never referred to in later answers.
  */
+/**
+ * For a typed question, rank textbook units by how well they match the words in
+ * the question. Units that match come first, then the rest keep their order.
+ * Quick chips do not use this because their meaning is fixed.
+ */
+export function rankUnitsForQuery<T extends { title: string; content: string; summary?: string; conceptId?: string }>(
+  units: T[],
+  query: string
+): T[] {
+  const stopWords = new Set(['the', 'and', 'what', 'how', 'does', 'for', 'with', 'this', 'that', 'can', 'are', 'you', 'why', 'when', 'use', 'mean', 'means', 'about', 'tell', 'explain']);
+  const terms = query
+    .toLowerCase()
+    .replace(/[^a-z0-9_ ]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !stopWords.has(t));
+  if (terms.length === 0) return units;
+  const score = (unit: T): number => {
+    const title = unit.title.toLowerCase();
+    const body = `${unit.summary ?? ''} ${unit.content} ${unit.conceptId ?? ''}`.toLowerCase();
+    return terms.reduce((sum, term) => sum + (title.includes(term) ? 3 : 0) + (body.includes(term) ? 1 : 0), 0);
+  };
+  const scored = units.map((unit, index) => ({ unit, index, value: score(unit) }));
+  if (!scored.some((entry) => entry.value > 0)) return units;
+  return scored
+    .sort((a, b) => b.value - a.value || a.index - b.index)
+    .map((entry) => entry.unit);
+}
+
 export const CHAT_SYSTEM_PROMPT = [
   'You are a Socratic SQL tutor.',
   "Use the learner's latest error, retry count, hints viewed, and stuck signal to choose the next helpful nudge.",
@@ -583,6 +611,15 @@ export function AskMyTextbookChat({
       });
     }
     
+    // Typed questions: search ALL units by the words in the question, so the
+    // answer matches what was asked and not only the current problem.
+    if (!quickChip && query.trim()) {
+      const allRanked = rankUnitsForQuery(textbookUnits, query);
+      if (allRanked !== textbookUnits && allRanked.length > 0) {
+        relevantUnits = allRanked.slice(0, 2);
+      }
+    }
+
     // Take top 2 most relevant units (reduce clutter)
     relevantUnits = relevantUnits.slice(0, 2);
 
@@ -1114,7 +1151,7 @@ export function AskMyTextbookChat({
       // Call LLM
       const llmCall = async (prompt: string): Promise<string> => {
         const result = await generateWithLLM(prompt, { 
-          params: { temperature: 0.3, max_tokens: 200 }
+          params: { temperature: 0.3, max_tokens: quickChip ? 200 : 350 }
         });
         return result.text;
       };

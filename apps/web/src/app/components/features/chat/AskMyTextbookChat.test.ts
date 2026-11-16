@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHAT_SYSTEM_PROMPT, deriveChatLearningSignals, findLastProblemError } from './AskMyTextbookChat';
+import { CHAT_SYSTEM_PROMPT, deriveChatLearningSignals, findLastProblemError, rankUnitsForQuery } from './AskMyTextbookChat';
 import type { InteractionEvent } from '../../../types';
 
 describe('AskMyTextbookChat learning signals', () => {
@@ -75,5 +75,24 @@ describe('AskMyTextbookChat context scoping', () => {
     expect(CHAT_SYSTEM_PROMPT).toMatch(/only answer questions about SQL/i);
     expect(CHAT_SYSTEM_PROMPT).toMatch(/Do not bring up earlier questions/i);
     expect(CHAT_SYSTEM_PROMPT).toMatch(/NEVER give working SQL code/);
+  });
+});
+
+
+describe('rankUnitsForQuery', () => {
+  const units = [
+    { title: 'SELECT basics', content: 'Pick columns from a table.', conceptId: 'select-basic' },
+    { title: 'Handling NULL values', content: 'Use IS NULL and COALESCE for missing data.', conceptId: 'null-handling' },
+    { title: 'GROUP BY', content: 'Group rows and count them.', conceptId: 'group-by' },
+  ];
+
+  it('puts the unit that matches the typed question first', () => {
+    const ranked = rankUnitsForQuery(units, 'how do I use group by with count?');
+    expect(ranked[0].title).toBe('GROUP BY');
+  });
+
+  it('keeps the original order when nothing matches', () => {
+    const ranked = rankUnitsForQuery(units, 'zzzz qqqq');
+    expect(ranked).toBe(units);
   });
 });
