@@ -1686,6 +1686,22 @@ export function LearningInterface() {
     emittedConceptViewsRef.current.clear();
   }, [learnerId, sessionId]);
 
+  // Safety net: the problem can also change from a URL parameter or restored UI
+  // state (not only handleProblemChange). Whatever the path, per-problem
+  // transient state (last error, escalation, generated explanation) must not
+  // carry over to the next problem.
+  const lastResetProblemIdRef = useRef(currentProblem.id);
+  useEffect(() => {
+    if (lastResetProblemIdRef.current === currentProblem.id) return;
+    lastResetProblemIdRef.current = currentProblem.id;
+    setLastError(undefined);
+    setLastErrorEventId(undefined);
+    setEscalationTriggered(false);
+    setNotesActionMessage(undefined);
+    setGenerationError(undefined);
+    setLatestGeneratedUnit(null);
+  }, [currentProblem.id]);
+
   const handleProblemChange = useCallback((id: string) => {
     const problem = sqlProblems.find(p => p.id === id);
     if (!problem) {
@@ -3192,6 +3208,7 @@ export function LearningInterface() {
               {/* Week 3 Feature: Ask My Textbook Chat - conditionally hidden if textbookDisabled */}
               {(!sessionConfig?.textbookDisabled) && (
                 <AskMyTextbookChat
+                  key={`${learnerId}:${currentProblem.id}`}
                   sessionId={sessionId}
                   learnerId={learnerId}
                   problemId={currentProblem.id}

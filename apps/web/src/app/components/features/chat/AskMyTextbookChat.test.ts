@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveChatLearningSignals } from './AskMyTextbookChat';
+import { CHAT_SYSTEM_PROMPT, deriveChatLearningSignals, findLastProblemError } from './AskMyTextbookChat';
 import type { InteractionEvent } from '../../../types';
 
 describe('AskMyTextbookChat learning signals', () => {
@@ -43,5 +43,37 @@ describe('AskMyTextbookChat learning signals', () => {
     expect(signals.hintCount).toBe(1);
     expect(signals.lastInteractionTypes).toEqual(['execution', 'hint_request', 'execution']);
     expect(signals.stuckReason).toBe('latest_execution_incorrect');
+  });
+});
+
+describe('AskMyTextbookChat context scoping', () => {
+  const base = { learnerId: 'learner-1', sessionId: 'session-1' } as const;
+  const interactions: InteractionEvent[] = [
+    { ...base, id: 'e-upper', timestamp: 1, eventType: 'error', problemId: 'upper-problem', sqlEngageSubtype: 'wrong_function' },
+    { ...base, id: 'e-null', timestamp: 2, eventType: 'hint_request', problemId: 'null-problem' },
+  ];
+
+  it('does not use an error from another problem', () => {
+    expect(findLastProblemError(interactions, 'null-problem', 'session-1')).toBeUndefined();
+  });
+
+  it('finds the latest failed run for the same problem', () => {
+    const found = findLastProblemError(interactions, 'upper-problem', 'session-1');
+    expect(found?.id).toBe('e-upper');
+  });
+
+  it('treats a failed execution as an error and ignores other sessions', () => {
+    const more: InteractionEvent[] = [
+      ...interactions,
+      { ...base, id: 'x-old', sessionId: 'session-0', timestamp: 3, eventType: 'error', problemId: 'null-problem' },
+      { ...base, id: 'x-fail', timestamp: 4, eventType: 'execution', problemId: 'null-problem', successful: false },
+    ];
+    expect(findLastProblemError(more, 'null-problem', 'session-1')?.id).toBe('x-fail');
+  });
+
+  it('keeps the chat on SQL topics and away from earlier questions', () => {
+    expect(CHAT_SYSTEM_PROMPT).toMatch(/only answer questions about SQL/i);
+    expect(CHAT_SYSTEM_PROMPT).toMatch(/Do not bring up earlier questions/i);
+    expect(CHAT_SYSTEM_PROMPT).toMatch(/NEVER give working SQL code/);
   });
 });

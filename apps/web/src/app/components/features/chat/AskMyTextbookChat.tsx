@@ -165,6 +165,41 @@ export function deriveChatLearningSignals(
 }
 
 /**
+ * Latest failed run for THIS problem (and session, when known).
+ * Errors from other problems must never leak into the chat context.
+ */
+export function findLastProblemError(
+  interactions: InteractionEvent[],
+  problemId: string,
+  sessionId?: string
+): InteractionEvent | undefined {
+  return [...interactions]
+    .reverse()
+    .find((interaction) => {
+      if (interaction.problemId !== problemId) return false;
+      if (sessionId && interaction.sessionId && interaction.sessionId !== sessionId) return false;
+      return interaction.eventType === 'error' ||
+        (interaction.eventType === 'execution' && interaction.successful === false);
+    });
+}
+
+/**
+ * System prompt for the "Ask my textbook" chat.
+ * Each request is independent (no chat memory), so off-topic questions must be
+ * declined and never referred to in later answers.
+ */
+export const CHAT_SYSTEM_PROMPT = [
+  'You are a Socratic SQL tutor.',
+  "Use the learner's latest error, retry count, hints viewed, and stuck signal to choose the next helpful nudge.",
+  'NEVER give working SQL code. NEVER give the solution. NEVER write "Example: SELECT..." with real code.',
+  'Help students discover answers through guidance and questions.',
+  'Be concise (under 300 chars). Cite sources like "(from your notes)".',
+  'Only answer questions about SQL, databases, or the current practice problem.',
+  'If the question is about anything else (general knowledge, news, personal topics), reply with one short sentence saying you can only help with SQL and this problem, then invite an SQL question.',
+  'Answer only the question asked now. Do not bring up earlier questions or other problems.'
+].join(' ');
+
+/**
  * Convert markdown to HTML
  * Handles bold, italic, inline code, code blocks, and lists
  */
@@ -371,6 +406,10 @@ export function AskMyTextbookChat({
   const CHAT_HISTORY_KEY = `chat-history-${learnerId}-${problemId}`;
 
   useEffect(() => {
+    // Always start from an empty chat for this learner + problem, then restore
+    // any saved history. Without this, messages from the previous problem stay
+    // on screen and get saved under the new problem's key.
+    setMessages([]);
     const saved = localStorage.getItem(CHAT_HISTORY_KEY);
     if (saved) {
       try {
@@ -514,10 +553,7 @@ export function AskMyTextbookChat({
       : recentInteractions;
     
     // Get the last error subtype for context (includes failed executions)
-    const lastError = [...allInteractions]
-      .reverse()
-      .find(i => i.eventType === 'error' || 
-                 (i.eventType === 'execution' && i.successful === false));
+    const lastError = findLastProblemError(allInteractions, problemId, sessionId);
     const errorSubtype = lastError?.sqlEngageSubtype || 
                         lastError?.errorSubtypeId ||
                         (lastError?.successful === false ? 'incorrect_results' : undefined);
@@ -1073,7 +1109,7 @@ export function AskMyTextbookChat({
         userPrompt = `Student question: "${query}"\n\nProblem: ${problem?.title}\nError: ${errorSubtype || 'None'}\n\nUsing this context:\n${contextText}\n\nProvide a helpful response (2-4 sentences). Guide their thinking with questions. DO NOT give them the SQL solution.`;
       }
       
-      const systemPrompt = `You are a Socratic SQL tutor. Use the learner's latest error, retry count, hints viewed, and stuck signal to choose the next helpful nudge. NEVER give working SQL code. NEVER give the solution. NEVER write "Example: SELECT..." with real code. Help students discover answers through guidance and questions. Be concise (under 300 chars). Cite sources like "(from your notes)".`;
+      const systemPrompt = CHAT_SYSTEM_PROMPT;
       
       // Call LLM
       const llmCall = async (prompt: string): Promise<string> => {
