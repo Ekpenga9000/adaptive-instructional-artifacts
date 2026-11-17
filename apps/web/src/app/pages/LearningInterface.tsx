@@ -138,7 +138,7 @@ const STRATEGY_OPTIONS: Array<{ value: LearnerProfile['currentStrategy']; label:
 // Difficulty color mapping
 const difficultyColors = {
   beginner: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
-  intermediate: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200',
+  intermediate: 'bg-amber-50 text-amber-800 border-amber-200 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200',
   advanced: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800'
 };
 
@@ -341,12 +341,12 @@ function DependencyWarningToast({ onClose }: DependencyWarningToastProps) {
       data-testid="dependency-warning-toast"
     >
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-sm">
-        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center shrink-0">
           <Sparkles className="w-4 h-4 text-amber-600" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm">You're doing great! 💪</p>
-          <p className="text-amber-700 text-xs mt-0.5">Try solving the next one without hints</p>
+          <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">Try solving the next one without hints</p>
         </div>
         <button
           onClick={onClose}
@@ -477,7 +477,7 @@ export function GeneratedExplanationCard({
       <Card className="p-4 space-y-3">
         <div>
           <h3 className="font-semibold">Save This Explanation</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             You have viewed all available hints. Save this explanation to your notes for later review.
           </p>
         </div>
@@ -492,7 +492,7 @@ export function GeneratedExplanationCard({
           )}
         </Button>
         {isGeneratingUnit && (
-          <p className="text-xs text-gray-500">Preparing your explanation…</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Preparing your explanation…</p>
         )}
         {generationError && (
           <p className="text-xs text-amber-700 dark:text-amber-300">{generationError}</p>
@@ -500,10 +500,10 @@ export function GeneratedExplanationCard({
         {notesActionMessage && (
           <div className="text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-300 dark:border-green-800 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center gap-2">
-              <CheckCircle className="size-5 text-green-600 flex-shrink-0" />
+              <CheckCircle className="size-5 text-green-600 dark:text-green-300 flex-shrink-0" />
               <p className="font-medium">{notesActionMessage}</p>
             </div>
-            <Link to="/textbook" className="text-blue-600 hover:underline mt-2 inline-flex items-center gap-1 text-xs">
+            <Link to="/textbook" className="text-blue-600 dark:text-blue-300 hover:underline mt-2 inline-flex items-center gap-1 text-xs">
               View in My Textbook →
             </Link>
           </div>
@@ -2662,47 +2662,42 @@ export function LearningInterface() {
 
         <div className={cn(
           "border-b",
-          isStudent ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-950 dark:to-gray-900 border-blue-100 dark:border-blue-800" : "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800"
+          isStudent ? "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700" : "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800"
         )}>
-          <div className="container mx-auto px-4 py-4">
+          <div className="container mx-auto px-4 py-3">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               {isStudent ? (
-                // Student-friendly header with blue accent
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-100 rounded-xl">
-                    <GraduationCap className="size-7 text-blue-600" />
+                // Student header: plain title with the problem position under it
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-[22px] font-bold text-gray-900 dark:text-gray-100">Practice SQL</h1>
+                    {isPreviewMode && (
+                      <Badge className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 border-purple-300 dark:border-purple-700">
+                        Preview Mode
+                      </Badge>
+                    )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-2xl font-bold text-gray-900">Practice SQL</h1>
-                      {isPreviewMode && (
-                        <Badge className="bg-purple-100 text-purple-800 border-purple-300">
-                          Preview Mode
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-gray-600 text-sm">
-                      {isPreviewMode 
-                        ? 'You are previewing the student experience. Click "Exit Preview" to return.'
-                        : 'Learn SQL with personalized hints and explanations'
-                      }
-                    </p>
-                  </div>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
+                    {isPreviewMode
+                      ? 'You are previewing the student experience. Click "Exit Preview" to return.'
+                      : `Problem ${currentProblemNumber} of ${totalProblems}`
+                    }
+                  </p>
                 </div>
               ) : (
                 // Instructor header with amber accent
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-amber-200 rounded-xl">
-                    <Settings2 className="size-7 text-amber-700" />
+                    <Settings2 className="size-7 text-amber-700 dark:text-amber-300" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h1 className="text-2xl font-bold text-gray-900">SQL Learning Lab</h1>
+                      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">SQL Learning Lab</h1>
                       <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
                         Instructor Mode
                       </Badge>
                     </div>
-                    <p className="text-gray-600 text-sm">Adaptive instructional system with Guidance Ladder</p>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Adaptive instructional system with Guidance Ladder</p>
                   </div>
                 </div>
               )}
@@ -2716,13 +2711,13 @@ export function LearningInterface() {
                       {isTimerPaused ? (
                         <Pause className="size-4 text-amber-500" />
                       ) : (
-                        <Clock className="size-4 text-gray-500" />
+                        <Clock className="size-4 text-gray-500 dark:text-gray-400" />
                       )}
                       <span className="text-sm font-medium tabular-nums">
                         {formatTime(elapsedTime)}
                       </span>
                       {totalTimeAcrossSessions > 0 && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           (total: {formatTime(totalTimeAcrossSessions + elapsedTime)})
                         </span>
                       )}
@@ -2731,7 +2726,7 @@ export function LearningInterface() {
                   <TooltipContent>
                     <p>Session time (pauses when tab is inactive)</p>
                     {totalTimeAcrossSessions > 0 && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
                         Total across all sessions: {formatTime(totalTimeAcrossSessions + elapsedTime)}
                       </p>
                     )}
@@ -2743,7 +2738,7 @@ export function LearningInterface() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-800">
-                        <Target className="size-4 text-green-600" />
+                        <Target className="size-4 text-green-600 dark:text-green-300" />
                         <span className="text-sm font-medium text-green-700 dark:text-green-300">
                           Solved: {solvedCount} / {totalProblems}
                         </span>
@@ -2761,7 +2756,7 @@ export function LearningInterface() {
                         {Array.from(topicProgressMap.entries()).map(([topic, progress]) => (
                           <div key={topic} className="flex items-center gap-2 text-xs">
                             <span className="capitalize w-20">{topic}:</span>
-                            <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div 
                                 className="h-full bg-green-500 rounded-full"
                                 style={{ width: `${progress.percent}%` }}
@@ -2787,7 +2782,7 @@ export function LearningInterface() {
                       )}>
                         <Zap className={cn(
                           "size-3",
-                          profileBadgeColors[currentProfileId]?.icon || 'text-gray-500'
+                          profileBadgeColors[currentProfileId]?.icon || 'text-gray-500 dark:text-gray-400'
                         )} />
                         <span>{profileDisplayNames[currentProfileId] || currentProfileId}</span>
                       </div>
@@ -2795,7 +2790,7 @@ export function LearningInterface() {
                     <TooltipContent side="bottom">
                       <p>{profileDescriptions[currentProfileId]}</p>
                       {isInstructor && (
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           HDI: {(currentHDI * 100).toFixed(0)}% • {hdiTrend}
                         </p>
                       )}
@@ -2822,9 +2817,9 @@ export function LearningInterface() {
 
                 {/* User name display - switching handled via "Switch User" in navigation */}
                 {profile?.name && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                    <GraduationCap className="size-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-700">{profile.name}</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <GraduationCap className="size-4 text-blue-600 dark:text-blue-300" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{profile.name}</span>
                   </div>
                 )}
               </div>
@@ -2835,16 +2830,16 @@ export function LearningInterface() {
         <div className="container mx-auto px-4 py-6">
           {/* Concept Learning Banner */}
           {activeConceptId && activeConceptTitle && (
-            <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg p-4">
+            <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 rounded-r-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-blue-600 font-medium mb-1">Learning Mode</p>
-                  <p className="text-blue-900 font-semibold text-lg">{activeConceptTitle}</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-300 font-medium mb-1">Learning Mode</p>
+                  <p className="text-blue-900 dark:text-blue-100 font-semibold text-lg">{activeConceptTitle}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Link 
                     to={`/concepts/${activeConceptId}`}
-                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                    className="text-sm text-blue-600 dark:text-blue-300 hover:text-blue-800 hover:underline flex items-center gap-1"
                   >
                     <BookOpen className="w-4 h-4" />
                     Review Concept
@@ -2856,7 +2851,7 @@ export function LearningInterface() {
                       // Clear query params without reload
                       window.history.replaceState({}, '', '/practice');
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600"
                     title="Clear learning context"
                   >
                     ×
@@ -2875,7 +2870,7 @@ export function LearningInterface() {
                 <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
                   <div className="flex-auto min-w-0 space-y-4">
                     <div className="space-y-2">
-                      <span className="text-sm text-gray-500 font-medium block">
+                      <span className="text-sm text-gray-500 dark:text-gray-400 font-medium block">
                         Problem {currentProblemNumber} of {totalProblems}
                       </span>
                       <div className="flex flex-wrap items-center gap-2">
@@ -2927,7 +2922,7 @@ export function LearningInterface() {
                             <TooltipContent>
                               <p className="font-medium">{concept?.name || conceptId}</p>
                               {concept?.description && (
-                                <p className="text-xs text-gray-400 max-w-xs">{concept.description}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">{concept.description}</p>
                               )}
                             </TooltipContent>
                           </Tooltip>
@@ -2990,10 +2985,10 @@ export function LearningInterface() {
                                           {problem.title}
                                         </span>
                                         {solved && (
-                                          <Check className="size-3.5 text-green-600 shrink-0" />
+                                          <Check className="size-3.5 text-green-600 dark:text-green-300 shrink-0" />
                                         )}
                                       </div>
-                                      <span className="text-xs text-gray-500">
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">
                                         {problem.concepts.length} concept{problem.concepts.length !== 1 ? 's' : ''} • Level {problem.topicDifficultyLevel}
                                       </span>
                                     </div>
@@ -3020,7 +3015,7 @@ export function LearningInterface() {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 mb-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 mb-4 flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-1 cursor-help">
@@ -3053,7 +3048,7 @@ export function LearningInterface() {
                     <h3 className="font-semibold text-sm mb-3">Instructor Controls</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
-                        <p className="text-xs text-gray-700 mb-1">Error subtype override</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-200 mb-1">Error subtype override</p>
                         <Select value={subtypeOverride} onValueChange={setSubtypeOverride}>
                           <SelectTrigger>
                             <SelectValue />
@@ -3069,7 +3064,7 @@ export function LearningInterface() {
                         </Select>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-700 mb-1">Strategy</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-200 mb-1">Strategy</p>
                         <Select
                           value={storage.getProfile(learnerId)?.currentStrategy || 'adaptive-medium'}
                           onValueChange={(value) => {
@@ -3120,14 +3115,14 @@ export function LearningInterface() {
                       <div key={attempt.id} className="text-xs border rounded p-2 bg-gray-50 dark:bg-gray-800">
                         <div className="flex items-center gap-2 mb-1">
                           {attempt.successful ? (
-                            <CheckCircle className="size-3 text-green-600" />
+                            <CheckCircle className="size-3 text-green-600 dark:text-green-300" />
                           ) : (
-                            <XCircle className="size-3 text-red-600" />
+                            <XCircle className="size-3 text-red-600 dark:text-red-300" />
                           )}
                           <span className="font-medium">
                             {attempt.successful ? 'Correct' : 'Incorrect'}
                           </span>
-                          <span className="text-gray-400 ml-auto">
+                          <span className="text-gray-400 dark:text-gray-500 ml-auto">
                             {new Date(attempt.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
@@ -3135,12 +3130,12 @@ export function LearningInterface() {
                           <code className="block font-mono text-[10px] truncate">{attempt.code}</code>
                         )}
                         {attempt.error && (
-                          <p className="text-red-600 truncate mt-0.5">{attempt.error}</p>
+                          <p className="text-red-600 dark:text-red-300 truncate mt-0.5">{attempt.error}</p>
                         )}
                       </div>
                     ))}
                     {problemAttempts.length === 0 && (
-                      <p className="text-xs text-gray-500">No attempts yet.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">No attempts yet.</p>
                     )}
                   </div>
                 </details>
@@ -3193,7 +3188,7 @@ export function LearningInterface() {
               {/* Week 5: Progress Hint - subtle, below hint panel */}
               {isStudent && progressHint && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-lg">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 dark:border-emerald-800 rounded-lg">
                     {hdiTrend === 'decreasing' ? (
                       <Sprout className="size-4 text-emerald-500" />
                     ) : hdiTrend === 'increasing' ? (
@@ -3230,7 +3225,7 @@ export function LearningInterface() {
                 <Card className="p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="size-4 text-amber-600" />
-                    <h3 className="font-semibold text-amber-900">Prerequisites Needed</h3>
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-100">Prerequisites Needed</h3>
                   </div>
                   <div className="space-y-2">
                     {currentProblem.concepts.map(conceptId => {
@@ -3259,22 +3254,22 @@ export function LearningInterface() {
               
               {/* Knowledge-Structure Layer: Learning Path Recommendations */}
               {learningPath && learningPath.recommendedConcepts.length > 0 && (
-                <Card className="p-4 bg-blue-50 border-blue-200">
+                <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2 mb-3">
-                    <GraduationCap className="size-4 text-blue-600" />
-                    <h3 className="font-semibold text-blue-900">Learning Path</h3>
+                    <GraduationCap className="size-4 text-blue-600 dark:text-blue-300" />
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">Learning Path</h3>
                   </div>
                   <div className="space-y-2">
                     {learningPath.recommendedConcepts.slice(0, 3).map((rec, index) => (
                       <div key={rec.conceptId} className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-medium">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs flex items-center justify-center font-medium">
                           {index + 1}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-800 truncate">
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 truncate">
                             {rec.name}
                           </p>
-                          <p className="text-xs text-blue-600">
+                          <p className="text-xs text-blue-600 dark:text-blue-300">
                             {rec.reason}
                           </p>
                         </div>
@@ -3286,8 +3281,8 @@ export function LearningInterface() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-blue-200">
-                    <div className="flex items-center justify-between text-xs text-blue-700">
+                  <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
                       <span>Progress: {learningPath.progressPercentage}%</span>
                       <span>{learningPath.completedConcepts}/{learningPath.totalConcepts} concepts</span>
                     </div>
@@ -3304,30 +3299,30 @@ export function LearningInterface() {
               <Card className="p-4">
                 <h3 className="font-semibold mb-3">Session Stats</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-sm">
-                  <div className="text-gray-600" title="Query attempts in this session only">Attempts (this session):</div>
+                  <div className="text-gray-600 dark:text-gray-300" title="Query attempts in this session only">Attempts (this session):</div>
                   <div className="font-medium text-right">{totalAttempts}</div>
-                  <div className="text-gray-600">Hints viewed:</div>
+                  <div className="text-gray-600 dark:text-gray-300">Hints viewed:</div>
                   <div className="font-medium text-right">{hintViewsCount}</div>
-                  <div className="text-gray-600">Help requests:</div>
+                  <div className="text-gray-600 dark:text-gray-300">Help requests:</div>
                   <div className="font-medium text-right">{helpRequestsCount}</div>
-                  <div className="text-gray-600">Session ID:</div>
-                  <div className="max-w-[180px] break-all text-right text-[11px] font-medium text-gray-700 sm:max-w-[220px] sm:text-xs">
+                  <div className="text-gray-600 dark:text-gray-300">Session ID:</div>
+                  <div className="max-w-[180px] break-all text-right text-[11px] font-medium text-gray-700 dark:text-gray-200 sm:max-w-[220px] sm:text-xs">
                     {sessionId || 'pending'}
                   </div>
-                  <div className="text-gray-600">Session sync:</div>
+                  <div className="text-gray-600 dark:text-gray-300">Session sync:</div>
                   <div
                     className={cn(
                       'text-right text-xs font-medium capitalize',
                       sessionSyncStatus === 'confirmed' && 'text-green-700 dark:text-green-300',
                       sessionSyncStatus === 'pending' && 'text-amber-700 dark:text-amber-300',
                       sessionSyncStatus === 'failed' && 'text-red-700 dark:text-red-300',
-                      sessionSyncStatus === 'checking' && 'text-gray-600',
+                      sessionSyncStatus === 'checking' && 'text-gray-600 dark:text-gray-300',
                     )}
                     title={sessionSyncError}
                   >
                     {sessionSyncStatus}
                   </div>
-                  <div className="text-gray-600">Time spent:</div>
+                  <div className="text-gray-600 dark:text-gray-300">Time spent:</div>
                   <div className="font-medium text-right">
                     {formatTime(timeSpent)}
                   </div>
@@ -3356,7 +3351,7 @@ export function LearningInterface() {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>HDI Level: {hdiLevel} dependency on hints</p>
-                      <p className="text-xs text-gray-400">Score: {(currentHDI * 100).toFixed(1)}%</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Score: {(currentHDI * 100).toFixed(1)}%</p>
                     </TooltipContent>
                   </Tooltip>
                 </div>
@@ -3389,21 +3384,21 @@ export function LearningInterface() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-12 shrink-0">HPA</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 w-12 shrink-0">HPA</span>
                           <div className="flex-1 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-indigo-500 rounded-full"
                               style={{ width: `${hdiComponents.hpa * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs font-mono text-gray-700 w-10 text-right">
+                          <span className="text-xs font-mono text-gray-700 dark:text-gray-200 w-10 text-right">
                             {hdiComponents.hpa.toFixed(2)}
                           </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="left">
                         <p className="font-medium">Hints Per Attempt (HPA)</p>
-                        <p className="text-xs text-gray-400">Ratio of hint requests to problem attempts</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Ratio of hint requests to problem attempts</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -3411,21 +3406,21 @@ export function LearningInterface() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-12 shrink-0">AED</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 w-12 shrink-0">AED</span>
                           <div className="flex-1 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-indigo-500 rounded-full"
                               style={{ width: `${hdiComponents.aed * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs font-mono text-gray-700 w-10 text-right">
+                          <span className="text-xs font-mono text-gray-700 dark:text-gray-200 w-10 text-right">
                             {hdiComponents.aed.toFixed(2)}
                           </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="left">
                         <p className="font-medium">Average Escalation Depth (AED)</p>
-                        <p className="text-xs text-gray-400">Average hint level used (1-3), normalized</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Average hint level used (1-3), normalized</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -3433,21 +3428,21 @@ export function LearningInterface() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-12 shrink-0">ER</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 w-12 shrink-0">ER</span>
                           <div className="flex-1 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-indigo-500 rounded-full"
                               style={{ width: `${hdiComponents.er * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs font-mono text-gray-700 w-10 text-right">
+                          <span className="text-xs font-mono text-gray-700 dark:text-gray-200 w-10 text-right">
                             {hdiComponents.er.toFixed(2)}
                           </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="left">
                         <p className="font-medium">Explanation Rate (ER)</p>
-                        <p className="text-xs text-gray-400">Ratio of explanation views to attempts</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Ratio of explanation views to attempts</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -3455,21 +3450,21 @@ export function LearningInterface() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-12 shrink-0">REAE</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 w-12 shrink-0">REAE</span>
                           <div className="flex-1 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-indigo-500 rounded-full"
                               style={{ width: `${hdiComponents.reae * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs font-mono text-gray-700 w-10 text-right">
+                          <span className="text-xs font-mono text-gray-700 dark:text-gray-200 w-10 text-right">
                             {hdiComponents.reae.toFixed(2)}
                           </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="left">
                         <p className="font-medium">Repeated Error After Explanation (REAE)</p>
-                        <p className="text-xs text-gray-400">Errors made after viewing explanations</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Errors made after viewing explanations</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -3477,21 +3472,21 @@ export function LearningInterface() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-12 shrink-0">IWH</span>
+                          <span className="text-xs text-gray-600 dark:text-gray-300 w-12 shrink-0">IWH</span>
                           <div className="flex-1 h-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-green-500 rounded-full"
                               style={{ width: `${hdiComponents.iwh * 100}%` }}
                             />
                           </div>
-                          <span className="text-xs font-mono text-gray-700 w-10 text-right">
+                          <span className="text-xs font-mono text-gray-700 dark:text-gray-200 w-10 text-right">
                             {hdiComponents.iwh.toFixed(2)}
                           </span>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="left">
                         <p className="font-medium">Improvement Without Hint (IWH)</p>
-                        <p className="text-xs text-gray-400">Successful attempts without using hints</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Successful attempts without using hints</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -3503,9 +3498,9 @@ export function LearningInterface() {
                     <span className="text-indigo-600">Trend:</span>
                     <span className={cn(
                       "font-medium",
-                      hdiTrend === 'decreasing' && "text-green-600",
+                      hdiTrend === 'decreasing' && "text-green-600 dark:text-green-300",
                       hdiTrend === 'increasing' && "text-amber-600",
-                      hdiTrend === 'stable' && "text-gray-600"
+                      hdiTrend === 'stable' && "text-gray-600 dark:text-gray-300"
                     )}>
                       {hdiTrend === 'decreasing' && '↓ Improving'}
                       {hdiTrend === 'increasing' && '↑ Rising'}

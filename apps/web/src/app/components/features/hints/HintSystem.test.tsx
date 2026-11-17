@@ -221,6 +221,18 @@ describe('HintSystem quota handling', () => {
     expect(mockStorage.logGuidanceView).not.toHaveBeenCalled();
   });
 
+  it('shows the three named hint steps', () => {
+    render(
+      <ToastProvider>
+        <HintSystem learnerId="learner-1" problemId="problem-1" sessionId="session-1" recentInteractions={[]} />
+      </ToastProvider>,
+    );
+    const steps = screen.getByTestId('hint-ladder-steps');
+    expect(steps.textContent).toContain('Nudge');
+    expect(steps.textContent).toContain('Guiding question');
+    expect(steps.textContent).toContain('Explanation');
+  });
+
   it('treats empty text and comment-only text as an empty editor', () => {
     expect(isSqlEditorEmpty('')).toBe(true);
     expect(isSqlEditorEmpty('   \n ')).toBe(true);

@@ -1386,6 +1386,34 @@ export function HintSystem({
         <RungIndicator rung={currentRung} size="sm" />
       </div>
 
+      {/* Hint ladder steps: what each hint level is called */}
+      <ol className="flex flex-wrap gap-2" aria-label="Hint steps" data-testid="hint-ladder-steps">
+        {[
+          { n: 1, label: 'Nudge' },
+          { n: 2, label: 'Guiding question' },
+          { n: 3, label: 'Explanation' },
+        ].map((step) => {
+          const shown = Math.min(hints.length, 3);
+          const state = step.n <= shown ? 'done' : step.n === shown + 1 ? 'next' : 'later';
+          return (
+            <li
+              key={step.n}
+              aria-current={state === 'next' ? 'step' : undefined}
+              className={
+                state === 'done'
+                  ? 'text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200'
+                  : state === 'next'
+                    ? 'text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700'
+                    : 'text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+              }
+            >
+              {step.n} · {step.label}
+              {state === 'done' ? ' ✓' : ''}
+            </li>
+          );
+        })}
+      </ol>
+
       {/* Hint Source Status - Shows which resources are being used */}
       <HintSourceStatus 
         learnerId={learnerId} 
@@ -1405,7 +1433,7 @@ export function HintSystem({
             />
           ))}
           {conceptIds.length > 3 && (
-            <span className="text-xs text-gray-400 self-center">
+            <span className="text-xs text-gray-400 dark:text-gray-500 self-center">
               +{conceptIds.length - 3}
             </span>
           )}
@@ -1491,7 +1519,7 @@ export function HintSystem({
                       {/* LLM failed badge - shows when AI was requested but unavailable */}
                       {enhancedInfo?.llmFailed && (
                         <span 
-                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700"
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
                           title={enhancedInfo.llmErrorMessage || 'AI service unavailable'}
                         >
                           <AlertCircle className="size-3" />
