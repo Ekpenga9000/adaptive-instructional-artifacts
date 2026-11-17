@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '../../ui/toast';
-import { buildHintSourceMetadata, HintSystem, shouldSuppressEscalation } from './HintSystem';
+import { buildHintSourceMetadata, HintSystem, isSqlEditorEmpty, shouldSuppressEscalation } from './HintSystem';
 
 const mockStorage = vi.hoisted(() => ({
   getProfile: vi.fn(),
@@ -197,6 +197,37 @@ describe('HintSystem quota handling', () => {
     expect(mockStorage.logGuidanceRequest).not.toHaveBeenCalled();
     expect(mockStorage.logGuidanceView).not.toHaveBeenCalled();
     expect(mockStorage.logGuidanceEscalate).not.toHaveBeenCalled();
+  });
+
+  it('shows a friendly notice and uses no hint when the editor is empty', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ToastProvider>
+        <HintSystem
+          learnerId="learner-1"
+          problemId="problem-1"
+          sessionId="session-1"
+          recentInteractions={[]}
+          isEditorEmpty
+        />
+      </ToastProvider>,
+    );
+
+    await user.click(screen.getByTestId('hint-action-button'));
+
+    expect(screen.getByTestId('hint-empty-editor-notice')).toBeTruthy();
+    expect(mockStorage.logGuidanceRequest).not.toHaveBeenCalled();
+    expect(mockStorage.logGuidanceView).not.toHaveBeenCalled();
+  });
+
+  it('treats empty text and comment-only text as an empty editor', () => {
+    expect(isSqlEditorEmpty('')).toBe(true);
+    expect(isSqlEditorEmpty('   \n ')).toBe(true);
+    expect(isSqlEditorEmpty('-- Write your SQL query here')).toBe(true);
+    expect(isSqlEditorEmpty('/* note */\n-- todo')).toBe(true);
+    expect(isSqlEditorEmpty('-- note\nSELECT 1')).toBe(false);
+    expect(isSqlEditorEmpty('select')).toBe(false);
   });
 
   describe('HintSystem escalation guard', () => {

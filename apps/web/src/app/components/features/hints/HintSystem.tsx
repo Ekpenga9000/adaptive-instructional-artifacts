@@ -74,6 +74,20 @@ interface HintSystemProps {
   sessionConfig?: SessionConfig | null;
   /** Whether an explanation generation request is currently in flight */
   isExplanationGenerating?: boolean;
+  /** True when the SQL editor has no real query (empty or only comments) */
+  isEditorEmpty?: boolean;
+}
+
+/**
+ * True when the editor has nothing a learner could get a hint about:
+ * empty text, or only SQL comments such as the starter line.
+ */
+export function isSqlEditorEmpty(code: string | null | undefined): boolean {
+  const withoutComments = (code ?? '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/--.*$/gm, '')
+    .trim();
+  return withoutComments.length === 0;
 }
 
 export type EscalationGuardState = {
@@ -102,7 +116,8 @@ export function HintSystem({
   onInteractionLogged,
   escalationProfile,
   sessionConfig,
-  isExplanationGenerating = false
+  isExplanationGenerating = false,
+  isEditorEmpty = false
 }: HintSystemProps) {
   const [hints, setHints] = useState<string[]>([]);
   const [hintPdfPassages, setHintPdfPassages] = useState<RetrievalPdfPassage[][]>([]);
@@ -117,6 +132,7 @@ export function HintSystem({
   const [saveToNotesError, setSaveToNotesError] = useState<string | null>(null);
   const [isProcessingHint, setIsProcessingHint] = useState(false);
   const [hintRuntimeError, setHintRuntimeError] = useState<string | null>(null);
+  const [showEmptyEditorNotice, setShowEmptyEditorNotice] = useState(false);
   const [autoEscalationInfo, setAutoEscalationInfo] = useState<{
     triggered: boolean;
     helpRequestCount: number;
@@ -913,6 +929,12 @@ export function HintSystem({
       });
     }
   };
+  useEffect(() => {
+    if (!isEditorEmpty) {
+      setShowEmptyEditorNotice(false);
+    }
+  }, [isEditorEmpty]);
+
   const handleRequestHint = async () => {
     if (!profile) {
       return;
@@ -927,6 +949,12 @@ export function HintSystem({
     if (isProcessingHint) {
       return;
     }
+    // Nothing written yet: ask the learner to try first. No hint is used.
+    if (isEditorEmpty) {
+      setShowEmptyEditorNotice(true);
+      return;
+    }
+    setShowEmptyEditorNotice(false);
     setIsProcessingHint(true);
     setHintRuntimeError(null);
     clearPendingAutoEscalation();
@@ -1718,6 +1746,20 @@ export function HintSystem({
         >
           <AlertCircle className="size-4 text-red-500 shrink-0 mt-0.5" />
           <p className="text-sm text-red-700 dark:text-red-300">{saveToNotesError}</p>
+        </div>
+      )}
+
+      {showEmptyEditorNotice && isEditorEmpty && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-2 flex items-start gap-2"
+          data-testid="hint-empty-editor-notice"
+        >
+          <Lightbulb className="size-4 text-blue-600 dark:text-blue-300 shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            Write a query in the editor first, even a rough one. Hints work best when you have something to build on.
+          </p>
         </div>
       )}
 

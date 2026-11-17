@@ -57,7 +57,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/toolti
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../components/ui/utils';
 import { DEFAULT_SQL_EDITOR_CODE, SQLEditor } from '../components/features/sql/SQLEditor';
-import { HintSystem } from '../components/features/hints/HintSystem';
+import { HintSystem, isSqlEditorEmpty } from '../components/features/hints/HintSystem';
 import { SurveyInvitationLinks } from '../components/features/surveys/SurveyInvitationLinks';
 import { ConceptCoverage } from '../components/features/research/ConceptCoverage';
 import { AskMyTextbookChat } from '../components/features/chat/AskMyTextbookChat';
@@ -3177,6 +3177,7 @@ export function LearningInterface() {
                 escalationProfile={currentEscalationProfile}
                 sessionConfig={sessionConfig}
                 isExplanationGenerating={isGeneratingUnit}
+                isEditorEmpty={isSqlEditorEmpty(sqlDraft)}
               />
 
               {showAddToNotes && (
