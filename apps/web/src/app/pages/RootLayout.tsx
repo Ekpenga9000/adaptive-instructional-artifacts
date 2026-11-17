@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button';
 import { Compass, BookOpen, BarChart3, FlaskConical, Code, HelpCircle, Menu, X, Keyboard, GraduationCap, LogOut, RefreshCw, AlertCircle, Users, Settings, Eye } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { MouseEvent } from 'react';
+import { TextbookUpdatesButton } from '../components/shared/TextbookUpdatesButton';
 import { WelcomeModal } from '../components/shared/WelcomeModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
@@ -753,6 +754,9 @@ export function RootLayout() {
 
               {/* Right side actions */}
               <div className="flex items-center gap-2">
+                {isSignedIn && showStudentNav && (
+                  <TextbookUpdatesButton learnerId={syncedProfile?.id ?? authUser?.id} />
+                )}
                 {canOpenWelcome && (
                   <>
                     {/* Keyboard shortcut hint - desktop only */}

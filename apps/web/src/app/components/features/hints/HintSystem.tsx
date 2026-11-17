@@ -1386,41 +1386,15 @@ export function HintSystem({
         <RungIndicator rung={currentRung} size="sm" />
       </div>
 
-      {/* Hint ladder steps: what each hint level is called */}
-      <ol className="flex flex-wrap gap-2" aria-label="Hint steps" data-testid="hint-ladder-steps">
-        {[
-          { n: 1, label: 'Nudge' },
-          { n: 2, label: 'Guiding question' },
-          { n: 3, label: 'Explanation' },
-        ].map((step) => {
-          const shown = Math.min(hints.length, 3);
-          const state = step.n <= shown ? 'done' : step.n === shown + 1 ? 'next' : 'later';
-          return (
-            <li
-              key={step.n}
-              aria-current={state === 'next' ? 'step' : undefined}
-              className={
-                state === 'done'
-                  ? 'text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200'
-                  : state === 'next'
-                    ? 'text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 ring-1 ring-blue-300 dark:ring-blue-700'
-                    : 'text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
-              }
-            >
-              {step.n} · {step.label}
-              {state === 'done' ? ' ✓' : ''}
-            </li>
-          );
-        })}
-      </ol>
-
       {/* Hint Source Status - Shows which resources are being used */}
-      <HintSourceStatus 
-        learnerId={learnerId} 
-        showDetails={false}
-        className="self-start"
-        studentMode={!isInstructor}
-      />
+      {isInstructor && (
+        <HintSourceStatus
+          learnerId={learnerId}
+          showDetails={false}
+          className="self-start"
+          studentMode={false}
+        />
+      )}
 
       {/* Concept tags */}
       {conceptIds.length > 0 && (

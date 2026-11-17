@@ -46,13 +46,18 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  XCircle
+  XCircle,
+  MessageCircle,
+  ChevronDown,
+  ChevronUp,
+  LayoutDashboard
 } from 'lucide-react';
 
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
+import { Popover } from '../components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../components/ui/utils';
@@ -81,6 +86,7 @@ import type { QueryResult } from '../lib/sql-executor';
 import { orchestrator } from '../lib/adaptive-orchestrator';
 import { buildBundleForCurrentProblem, generateUnitFromLLM } from '../lib/content/content-generator';
 import { renderTextbookContent } from '../lib/content/textbook-renderer';
+import { TEXTBOOK_CHANGED_EVENT } from '../lib/storage/textbook-updates';
 import { buildPdfIndexOutputFields } from '../lib/api/pdf-retrieval';
 import { createEventId } from '../lib/utils/event-id';
 import { startBackgroundAnalysis, stopBackgroundAnalysis, runAnalysisOnce, ANALYSIS_INTERVAL_MS } from '../lib/trace-analyzer';
@@ -503,12 +509,9 @@ export function GeneratedExplanationCard({
               <CheckCircle className="size-5 text-green-600 dark:text-green-300 flex-shrink-0" />
               <p className="font-medium">{notesActionMessage}</p>
             </div>
-            <Link to="/textbook" className="text-blue-600 dark:text-blue-300 hover:underline mt-2 inline-flex items-center gap-1 text-xs">
-              View in My Textbook →
-            </Link>
+            <p className="mt-1 text-xs text-green-700 dark:text-green-300">Look for the book icon at the top of the page.</p>
           </div>
         )}
-        {unit && <GeneratedExplanationPreview unit={unit} />}
       </Card>
     </div>
   );
@@ -600,6 +603,26 @@ export function LearningInterface() {
   const [showDependencyWarning, setShowDependencyWarning] = useState(false);
   const [hdiRefreshKey, setHdiRefreshKey] = useState(0);
   const [solvedRefreshKey, setSolvedRefreshKey] = useState(0);
+  const [chatOpen, setChatOpen] = useState(false);
+  // The student header strip starts folded away so the problem, editor and hints get the space.
+  const [headerCollapsed, setHeaderCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sql-adapt-practice-header-collapsed') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const toggleHeaderCollapsed = useCallback(() => {
+    setHeaderCollapsed((previous) => {
+      const next = !previous;
+      try {
+        localStorage.setItem('sql-adapt-practice-header-collapsed', String(next));
+      } catch {
+        // Storage unavailable: the choice just lasts for this visit.
+      }
+      return next;
+    });
+  }, []);
   const [hydratedSolvedIds, setHydratedSolvedIds] = useState<Set<string>>(new Set());
   const dependencyWarningShownRef = useRef(false);
   const lastHintRequestTimeRef = useRef<number>(0);
@@ -2196,6 +2219,7 @@ export function LearningInterface() {
         ));
         // Signal other tabs (e.g. TextbookPage open alongside) to reload units.
         broadcastSync('sql-adapt-textbook', learnerId);
+        window.dispatchEvent(new Event(TEXTBOOK_CHANGED_EVENT));
       })
       .catch((error) => {
         setGenerationError((error as Error).message);
@@ -2624,6 +2648,126 @@ export function LearningInterface() {
     );
   }
 
+  const progressPanels = (
+    <>
+              <ConceptCoverage learnerId={learnerId} />
+
+              {/* Knowledge-Structure Layer: Prerequisite Warnings */}
+              {currentProblem.concepts.some(conceptId => {
+                const profile = storage.getProfile(learnerId);
+                if (!profile) return false;
+                const status = checkPrerequisites(conceptId, profile.conceptsCovered);
+                return !status.ready;
+              }) && (
+                <Card className="p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="size-4 text-amber-600" />
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-100">Prerequisites Needed</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {currentProblem.concepts.map(conceptId => {
+                      const profile = storage.getProfile(learnerId);
+                      if (!profile) return null;
+                      const status = checkPrerequisites(conceptId, profile.conceptsCovered);
+                      if (status.ready) return null;
+                      
+                      return (
+                        <div key={conceptId} className="text-sm">
+                          <p className="text-amber-800 dark:text-amber-300 font-medium">
+                            {conceptId.replace(/-/g, ' ')}
+                          </p>
+                          {status.missing.length > 0 && (
+                            <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">
+                              Missing: {status.missing.slice(0, 2).join(', ')}
+                              {status.missing.length > 2 && ` +${status.missing.length - 2} more`}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+              
+              {/* Knowledge-Structure Layer: Learning Path Recommendations */}
+              {learningPath && learningPath.recommendedConcepts.length > 0 && (
+                <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <GraduationCap className="size-4 text-blue-600 dark:text-blue-300" />
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">Learning Path</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {learningPath.recommendedConcepts.slice(0, 3).map((rec, index) => (
+                      <div key={rec.conceptId} className="flex items-start gap-2">
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs flex items-center justify-center font-medium">
+                          {index + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 truncate">
+                            {rec.name}
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-300">
+                            {rec.reason}
+                          </p>
+                        </div>
+                        {rec.priority === 'high' && (
+                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[10px] rounded">
+                            High
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
+                      <span>Progress: {learningPath.progressPercentage}%</span>
+                      <span>{learningPath.completedConcepts}/{learningPath.totalConcepts} concepts</span>
+                    </div>
+                    <div className="mt-1.5 h-2 bg-blue-200 dark:bg-blue-900/30 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 rounded-full transition-all"
+                        style={{ width: `${learningPath.progressPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              <Card className="p-4">
+                <h3 className="font-semibold mb-3">Session Stats</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-sm">
+                  <div className="text-gray-600 dark:text-gray-300" title="Query attempts in this session only">Attempts (this session):</div>
+                  <div className="font-medium text-right">{totalAttempts}</div>
+                  <div className="text-gray-600 dark:text-gray-300">Hints viewed:</div>
+                  <div className="font-medium text-right">{hintViewsCount}</div>
+                  <div className="text-gray-600 dark:text-gray-300">Help requests:</div>
+                  <div className="font-medium text-right">{helpRequestsCount}</div>
+                  <div className="text-gray-600 dark:text-gray-300">Session ID:</div>
+                  <div className="max-w-[180px] break-all text-right text-[11px] font-medium text-gray-700 dark:text-gray-200 sm:max-w-[220px] sm:text-xs">
+                    {sessionId || 'pending'}
+                  </div>
+                  <div className="text-gray-600 dark:text-gray-300">Session sync:</div>
+                  <div
+                    className={cn(
+                      'text-right text-xs font-medium capitalize',
+                      sessionSyncStatus === 'confirmed' && 'text-green-700 dark:text-green-300',
+                      sessionSyncStatus === 'pending' && 'text-amber-700 dark:text-amber-300',
+                      sessionSyncStatus === 'failed' && 'text-red-700 dark:text-red-300',
+                      sessionSyncStatus === 'checking' && 'text-gray-600 dark:text-gray-300',
+                    )}
+                    title={sessionSyncError}
+                  >
+                    {sessionSyncStatus}
+                  </div>
+                  <div className="text-gray-600 dark:text-gray-300">Time spent:</div>
+                  <div className="font-medium text-right">
+                    {formatTime(timeSpent)}
+                  </div>
+                </div>
+              </Card>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Week 5: Dependency Warning Toast */}
@@ -2660,7 +2804,76 @@ export function LearningInterface() {
           </div>
         )}
 
-        <div className={cn(
+        {isStudent && !sessionConfig?.textbookDisabled && (
+          <>
+            <div
+              role="dialog"
+              aria-label="Ask my textbook"
+              data-testid="chat-popup"
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setChatOpen(false);
+              }}
+              className={cn(
+                'fixed bottom-24 right-4 z-40 flex h-[min(600px,72vh)] w-[min(94vw,400px)] flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl',
+                !chatOpen && 'hidden',
+              )}
+            >
+              <div className="flex justify-end border-b border-gray-200 dark:border-gray-700 px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => setChatOpen(false)}
+                  aria-label="Close chat"
+                  className="rounded p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <AskMyTextbookChat
+                  key={`${learnerId}:${currentProblem.id}`}
+                  sessionId={sessionId}
+                  learnerId={learnerId}
+                  problemId={currentProblem.id}
+                  recentInteractions={problemInteractions}
+                  onInteractionLogged={handleHintSystemInteraction}
+                  fillHeight
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChatOpen((open) => !open)}
+              aria-label="Ask my textbook"
+              aria-expanded={chatOpen}
+              data-testid="chat-launcher"
+              className="fixed bottom-6 right-4 z-40 inline-flex size-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
+            >
+              {chatOpen ? <X className="size-6" aria-hidden="true" /> : <MessageCircle className="size-6" aria-hidden="true" />}
+            </button>
+          </>
+        )}
+
+        {isStudent && (
+          <>
+            <h1 className="sr-only">Practice SQL</h1>
+            <div className="sticky top-2 z-30 h-0">
+              <button
+                type="button"
+                onClick={toggleHeaderCollapsed}
+                aria-expanded={!headerCollapsed}
+                aria-controls="practice-header-strip"
+                data-testid="practice-header-toggle"
+                className="absolute right-4 top-0 inline-flex items-center gap-1.5 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-800 dark:text-gray-100 shadow-md hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                {headerCollapsed ? <ChevronDown className="size-4" aria-hidden="true" /> : <ChevronUp className="size-4" aria-hidden="true" />}
+                {headerCollapsed ? 'Progress' : 'Hide'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {!(isStudent && headerCollapsed) && (
+        <div id="practice-header-strip" className={cn(
           "border-b",
           isStudent ? "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700" : "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800"
         )}>
@@ -2822,10 +3035,30 @@ export function LearningInterface() {
                     <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{profile.name}</span>
                   </div>
                 )}
+
+                {/* Student menu: concept coverage, learning path and stats live here instead of the page */}
+                {isStudent && (
+                  <Popover
+                    triggerLabel="Progress and tools"
+                    triggerTestId="progress-menu-button"
+                    panelTestId="progress-menu-panel"
+                    panelClassName="w-[min(94vw,420px)]"
+                    trigger={
+                      <>
+                        <LayoutDashboard className="size-4" aria-hidden="true" />
+                        <span>Progress &amp; tools</span>
+                        <ChevronDown className="size-4" aria-hidden="true" />
+                      </>
+                    }
+                  >
+                    <div className="space-y-4">{progressPanels}</div>
+                  </Popover>
+                )}
               </div>
             </div>
           </div>
         </div>
+        )}
 
         <div className="container mx-auto px-4 py-6">
           {/* Concept Learning Banner */}
@@ -3201,6 +3434,9 @@ export function LearningInterface() {
                 </div>
               )}
 
+              {/* Instructors keep the full sidebar. Students get these in the chat window and the Progress menu. */}
+              {!isStudent && (
+                <>
               {/* Week 3 Feature: Ask My Textbook Chat - conditionally hidden if textbookDisabled */}
               {(!sessionConfig?.textbookDisabled) && (
                 <AskMyTextbookChat
@@ -3213,121 +3449,9 @@ export function LearningInterface() {
                 />
               )}
 
-              <ConceptCoverage learnerId={learnerId} />
-
-              {/* Knowledge-Structure Layer: Prerequisite Warnings */}
-              {currentProblem.concepts.some(conceptId => {
-                const profile = storage.getProfile(learnerId);
-                if (!profile) return false;
-                const status = checkPrerequisites(conceptId, profile.conceptsCovered);
-                return !status.ready;
-              }) && (
-                <Card className="p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="size-4 text-amber-600" />
-                    <h3 className="font-semibold text-amber-900 dark:text-amber-100">Prerequisites Needed</h3>
-                  </div>
-                  <div className="space-y-2">
-                    {currentProblem.concepts.map(conceptId => {
-                      const profile = storage.getProfile(learnerId);
-                      if (!profile) return null;
-                      const status = checkPrerequisites(conceptId, profile.conceptsCovered);
-                      if (status.ready) return null;
-                      
-                      return (
-                        <div key={conceptId} className="text-sm">
-                          <p className="text-amber-800 dark:text-amber-300 font-medium">
-                            {conceptId.replace(/-/g, ' ')}
-                          </p>
-                          {status.missing.length > 0 && (
-                            <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">
-                              Missing: {status.missing.slice(0, 2).join(', ')}
-                              {status.missing.length > 2 && ` +${status.missing.length - 2} more`}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
+                  {progressPanels}
+                </>
               )}
-              
-              {/* Knowledge-Structure Layer: Learning Path Recommendations */}
-              {learningPath && learningPath.recommendedConcepts.length > 0 && (
-                <Card className="p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-3">
-                    <GraduationCap className="size-4 text-blue-600 dark:text-blue-300" />
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">Learning Path</h3>
-                  </div>
-                  <div className="space-y-2">
-                    {learningPath.recommendedConcepts.slice(0, 3).map((rec, index) => (
-                      <div key={rec.conceptId} className="flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs flex items-center justify-center font-medium">
-                          {index + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-blue-800 dark:text-blue-200 truncate">
-                            {rec.name}
-                          </p>
-                          <p className="text-xs text-blue-600 dark:text-blue-300">
-                            {rec.reason}
-                          </p>
-                        </div>
-                        {rec.priority === 'high' && (
-                          <span className="flex-shrink-0 px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[10px] rounded">
-                            High
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
-                      <span>Progress: {learningPath.progressPercentage}%</span>
-                      <span>{learningPath.completedConcepts}/{learningPath.totalConcepts} concepts</span>
-                    </div>
-                    <div className="mt-1.5 h-2 bg-blue-200 dark:bg-blue-900/30 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${learningPath.progressPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-                </Card>
-              )}
-
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3">Session Stats</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 text-sm">
-                  <div className="text-gray-600 dark:text-gray-300" title="Query attempts in this session only">Attempts (this session):</div>
-                  <div className="font-medium text-right">{totalAttempts}</div>
-                  <div className="text-gray-600 dark:text-gray-300">Hints viewed:</div>
-                  <div className="font-medium text-right">{hintViewsCount}</div>
-                  <div className="text-gray-600 dark:text-gray-300">Help requests:</div>
-                  <div className="font-medium text-right">{helpRequestsCount}</div>
-                  <div className="text-gray-600 dark:text-gray-300">Session ID:</div>
-                  <div className="max-w-[180px] break-all text-right text-[11px] font-medium text-gray-700 dark:text-gray-200 sm:max-w-[220px] sm:text-xs">
-                    {sessionId || 'pending'}
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-300">Session sync:</div>
-                  <div
-                    className={cn(
-                      'text-right text-xs font-medium capitalize',
-                      sessionSyncStatus === 'confirmed' && 'text-green-700 dark:text-green-300',
-                      sessionSyncStatus === 'pending' && 'text-amber-700 dark:text-amber-300',
-                      sessionSyncStatus === 'failed' && 'text-red-700 dark:text-red-300',
-                      sessionSyncStatus === 'checking' && 'text-gray-600 dark:text-gray-300',
-                    )}
-                    title={sessionSyncError}
-                  >
-                    {sessionSyncStatus}
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-300">Time spent:</div>
-                  <div className="font-medium text-right">
-                    {formatTime(timeSpent)}
-                  </div>
-                </div>
-              </Card>
 
               {/* Week 5: Unified HDI Display with 5 Components - INSTRUCTOR ONLY */}
               {isInstructor && (

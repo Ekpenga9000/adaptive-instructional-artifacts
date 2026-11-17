@@ -71,6 +71,8 @@ interface AskMyTextbookChatProps {
   recentInteractions: InteractionEvent[];
   /** Callback when interaction is logged */
   onInteractionLogged?: (event: InteractionEvent) => void;
+  /** Fill the height of the parent (used inside the floating chat window). */
+  fillHeight?: boolean;
 }
 
 // Quick chip options
@@ -491,7 +493,8 @@ export function AskMyTextbookChat({
   learnerId,
   problemId,
   recentInteractions,
-  onInteractionLogged
+  onInteractionLogged,
+  fillHeight = false
 }: AskMyTextbookChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -1642,7 +1645,7 @@ export function AskMyTextbookChat({
   }
 
   return (
-    <Card className="flex flex-col relative" data-testid="chat-panel">
+    <Card className={cn('flex flex-col relative', fillHeight && 'h-full min-h-0 border-0 shadow-none rounded-none')} data-testid="chat-panel">
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
         {toasts.map(toast => (
@@ -1704,7 +1707,7 @@ export function AskMyTextbookChat({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 min-h-[200px] max-h-[400px] overflow-y-auto">
+      <div className={cn('flex-1 overflow-y-auto', fillHeight ? 'min-h-0' : 'min-h-[200px] max-h-[400px]')}>
         <div className="p-3 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center py-6 text-gray-400 dark:text-gray-500 text-sm">
