@@ -442,7 +442,7 @@ export function AdaptiveTextbook({
         {noteSearch && <Button size="sm" variant="outline" onClick={() => setNoteSearch('')}>Clear note search</Button>}
         <p role="status" className="my-2 text-sm">{filteredUnits.length} of {orderedUnits.length} saved notes</p>
         <label className="block text-sm font-medium mb-3">Sort saved notes
-          <select className="block mt-1 w-full rounded border p-2" value={sortMode} onChange={event => setSortMode(event.target.value as SortMode)}>
+          <select className="block mt-1 w-full rounded border p-2 bg-white text-gray-900 dark:text-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:[color-scheme:dark] [&>option]:bg-white [&>option]:text-gray-900 dark:[&>option]:bg-gray-800 dark:[&>option]:text-gray-100" value={sortMode} onChange={event => setSortMode(event.target.value as SortMode)}>
             <option value="quality">Quality</option><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="prerequisite">Learning path</option>
           </select>
         </label>

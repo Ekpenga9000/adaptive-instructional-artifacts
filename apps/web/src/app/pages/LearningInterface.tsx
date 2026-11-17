@@ -3124,7 +3124,7 @@ export function LearningInterface() {
                   </div>
                   
                   {/* Enhanced Problem Selector with difficulty, concepts, and solved status */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full min-w-0 items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -3140,7 +3140,7 @@ export function LearningInterface() {
                       value={currentProblem.id}
                       onValueChange={handleProblemChange}
                     >
-                    <SelectTrigger className="w-full lg:w-[300px]" data-testid="problem-select-trigger">
+                    <SelectTrigger className="min-w-0 flex-1 w-auto max-w-full" data-testid="problem-select-trigger">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <span className="truncate">{currentProblem.title}</span>
                         <Badge variant="outline" className="text-[10px] px-1 shrink-0 hidden sm:inline-flex" title="Problems solved">

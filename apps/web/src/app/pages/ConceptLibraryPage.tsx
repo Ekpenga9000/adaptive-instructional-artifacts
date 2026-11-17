@@ -167,8 +167,8 @@ export function ConceptLibraryPage() {
         </div>
 
         <div className="flex flex-wrap gap-4 mb-5">
-          <label className="text-sm font-medium">Topic<select className="block border rounded-lg p-3 bg-white mt-1 max-w-full" value={topic} onChange={e => setTopic(e.target.value)}><option value="all">All topics</option>{Object.entries(TOPIC_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
-          <label className="text-sm font-medium">Source<select className="block border rounded-lg p-3 bg-white mt-1" value={source} onChange={e => setSource(e.target.value)}><option value="all">All sources</option><option value="murachs-mysql-3rd-edition">Murach’s MySQL</option><option value="dbms-ramakrishnan-3rd-edition">Database Management Systems</option></select></label>
+          <label className="text-sm font-medium">Topic<select className="block border rounded-lg p-3 bg-white mt-1 max-w-full text-gray-900 dark:text-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:[color-scheme:dark] [&>option]:bg-white [&>option]:text-gray-900 dark:[&>option]:bg-gray-800 dark:[&>option]:text-gray-100" value={topic} onChange={e => setTopic(e.target.value)}><option value="all">All topics</option>{Object.entries(TOPIC_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+          <label className="text-sm font-medium">Source<select className="block border rounded-lg p-3 bg-white mt-1 text-gray-900 dark:text-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:[color-scheme:dark] [&>option]:bg-white [&>option]:text-gray-900 dark:[&>option]:bg-gray-800 dark:[&>option]:text-gray-100" value={source} onChange={e => setSource(e.target.value)}><option value="all">All sources</option><option value="murachs-mysql-3rd-edition">Murach’s MySQL</option><option value="dbms-ramakrishnan-3rd-edition">Database Management Systems</option></select></label>
         </div>
         <p role="status" className="mb-4 text-sm text-gray-600">{filtered.length} of {concepts.length} concepts · Follow the topic groups from foundations to administration.</p>
         {/* Filters */}
