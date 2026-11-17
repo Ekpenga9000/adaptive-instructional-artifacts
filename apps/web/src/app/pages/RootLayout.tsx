@@ -730,6 +730,13 @@ export function RootLayout() {
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center gap-1">
                 {navItems.map((item) => (
+                  item.to === '/textbook' && showStudentNav ? (
+                    <TextbookUpdatesButton
+                      key={item.to}
+                      learnerId={syncedProfile?.id ?? authUser?.id}
+                      isActive={item.isActive}
+                    />
+                  ) : (
                   <Tooltip key={item.to}>
                     <TooltipTrigger asChild>
                       <Button
@@ -749,14 +756,12 @@ export function RootLayout() {
                       <p>Go to {item.label}</p>
                     </TooltipContent>
                   </Tooltip>
+                  )
                 ))}
               </div>
 
               {/* Right side actions */}
               <div className="flex items-center gap-2">
-                {isSignedIn && showStudentNav && (
-                  <TextbookUpdatesButton learnerId={syncedProfile?.id ?? authUser?.id} />
-                )}
                 {canOpenWelcome && (
                   <>
                     {/* Keyboard shortcut hint - desktop only */}

@@ -4,10 +4,14 @@ import { BookOpen } from 'lucide-react';
 
 import { useTextbookUpdates } from '../../hooks/useTextbookUpdates';
 import { unitActivityTimestamp } from '../../lib/storage/textbook-updates';
+import { buttonVariants } from '../ui/button';
 import { Popover } from '../ui/popover';
+import { cn } from '../ui/utils';
 
 interface TextbookUpdatesButtonProps {
   learnerId: string | undefined;
+  /** True while the learner is on the My Textbook page. */
+  isActive?: boolean;
 }
 
 function formatAgo(timestamp: number): string {
@@ -24,7 +28,7 @@ function formatAgo(timestamp: number): string {
  * the learner last looked, blinks while there is something new, and opens a
  * short quick view with a link to the full My Textbook page.
  */
-export function TextbookUpdatesButton({ learnerId }: TextbookUpdatesButtonProps) {
+export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookUpdatesButtonProps) {
   const { count, recent, lastSeen, markSeen } = useTextbookUpdates(learnerId);
   const location = useLocation();
   const [highlightSince, setHighlightSince] = useState<number | null>(null);
@@ -47,7 +51,11 @@ export function TextbookUpdatesButton({ learnerId }: TextbookUpdatesButtonProps)
       triggerLabel={label}
       triggerTestId="textbook-updates-button"
       panelTestId="textbook-updates-panel"
-      triggerClassName="relative size-9 justify-center p-0 border-transparent bg-transparent dark:bg-transparent"
+      align="start"
+      triggerClassName={cn(
+        buttonVariants({ variant: isActive ? 'default' : 'ghost', size: 'sm' }),
+        'touch-manipulation gap-2 border-transparent',
+      )}
       onOpenChange={(open) => {
         if (open) {
           setHighlightSince(lastSeen);
@@ -56,15 +64,18 @@ export function TextbookUpdatesButton({ learnerId }: TextbookUpdatesButtonProps)
       }}
       trigger={
         <>
-          <BookOpen className="size-5" aria-hidden="true" />
-          {count > 0 && (
-            <span
-              data-testid="textbook-updates-badge"
-              className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[11px] font-semibold leading-[18px] text-center motion-safe:animate-pulse"
-            >
-              {count > 9 ? '9+' : count}
-            </span>
-          )}
+          <span className="relative inline-flex">
+            <BookOpen className="size-4" aria-hidden="true" />
+            {count > 0 && (
+              <span
+                data-testid="textbook-updates-badge"
+                className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-semibold leading-4 text-center motion-safe:animate-pulse"
+              >
+                {count > 9 ? '9+' : count}
+              </span>
+            )}
+          </span>
+          <span>My Textbook</span>
         </>
       }
     >

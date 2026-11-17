@@ -49,7 +49,7 @@ vi.mock('../lib/storage', () => ({
 }));
 
 vi.mock('../components/shared/TextbookUpdatesButton', () => ({
-  TextbookUpdatesButton: () => <span data-testid="textbook-updates-stub" />,
+  TextbookUpdatesButton: () => <span data-testid="textbook-updates-stub">My Textbook</span>,
 }));
 
 vi.mock('../lib/auth-guard', () => ({
