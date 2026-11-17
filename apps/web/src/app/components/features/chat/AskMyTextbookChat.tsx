@@ -399,7 +399,7 @@ function ChatMessageBubble({ msg, idx, onSaveToNotes }: ChatMessageBubbleProps) 
                 <button
                   type="button"
                   onClick={() => setShowSources(!showSources)}
-                  className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                  className="inline-flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                 >
                   <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
                     {sourceCount} source{sourceCount !== 1 ? 's' : ''}
@@ -423,7 +423,7 @@ function ChatMessageBubble({ msg, idx, onSaveToNotes }: ChatMessageBubbleProps) 
             <Button
               variant="ghost"
               size="sm"
-              className="h-5 px-2 text-[10px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              className="h-5 px-2 text-[10px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 dark:text-gray-400 dark:hover:text-gray-300"
               onClick={() => onSaveToNotes(idx)}
               disabled={msg.savedToNotes}
             >

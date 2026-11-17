@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { storage, subscribeToSync } from '../lib/storage';
 import {
@@ -28,7 +28,12 @@ export interface TextbookUpdatesState {
  * The first time it runs for a learner it sets a starting point, so old notes
  * do not show up as new.
  */
-export function useTextbookUpdates(learnerId: string | undefined): TextbookUpdatesState {
+export function useTextbookUpdates(learnerIdInput: string | undefined): TextbookUpdatesState {
+  // The id can be briefly undefined while the profile loads. Keep the last real
+  // one so the counter does not reset and flicker.
+  const lastIdRef = useRef<string | undefined>(learnerIdInput);
+  if (learnerIdInput) lastIdRef.current = learnerIdInput;
+  const learnerId = learnerIdInput ?? lastIdRef.current;
   const [state, setState] = useState<{ count: number; recent: InstructionalUnit[]; lastSeen: number }>({
     count: 0,
     recent: [],
@@ -90,6 +95,8 @@ export function useTextbookUpdates(learnerId: string | undefined): TextbookUpdat
     const previous = state.lastSeen;
     if (learnerId) {
       markTextbookSeen(learnerId);
+      // Clear the counter right away instead of waiting for the next refresh.
+      setState((prev) => (prev.count === 0 ? prev : { ...prev, count: 0 }));
       refresh();
     }
     return previous;

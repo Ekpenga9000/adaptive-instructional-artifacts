@@ -1433,7 +1433,7 @@ export function HintSystem({
       )}
       
       {hints.length === 0 ? (
-        <div data-testid="hint-empty-state" className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 p-6 text-center">
+        <div data-testid="hint-empty-state" className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/40 dark:bg-gray-800/50 p-6 text-center">
           <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-full w-fit mx-auto mb-3">
             <HelpCircle className="size-5 text-amber-500" />
           </div>

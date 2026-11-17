@@ -42,8 +42,10 @@ export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookU
     }
   }, [location.pathname, count]);
 
-  const label = count > 0
-    ? `My Textbook notes, ${count} new ${count === 1 ? 'update' : 'updates'}`
+  // No counter while the learner is on the My Textbook page.
+  const shownCount = location.pathname === '/textbook' ? 0 : count;
+  const label = shownCount > 0
+    ? `My Textbook notes, ${shownCount} new ${shownCount === 1 ? 'update' : 'updates'}`
     : 'My Textbook notes';
 
   return (
@@ -66,12 +68,12 @@ export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookU
         <>
           <span className="relative inline-flex">
             <BookOpen className="size-4" aria-hidden="true" />
-            {count > 0 && (
+            {shownCount > 0 && (
               <span
                 data-testid="textbook-updates-badge"
                 className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-semibold leading-4 text-center motion-safe:animate-pulse"
               >
-                {count > 9 ? '9+' : count}
+                {shownCount > 9 ? '9+' : shownCount}
               </span>
             )}
           </span>

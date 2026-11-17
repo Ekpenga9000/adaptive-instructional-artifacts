@@ -1,5 +1,7 @@
 import { Outlet, Link, useLocation, Navigate, useNavigate } from 'react-router';
-import { Button } from '../components/ui/button';
+import { Button, buttonVariants } from '../components/ui/button';
+import { Popover } from '../components/ui/popover';
+import { cn } from '../components/ui/utils';
 import { Compass, BookOpen, BarChart3, FlaskConical, Code, HelpCircle, Menu, X, Keyboard, GraduationCap, LogOut, RefreshCw, AlertCircle, Users, Settings, Eye } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { MouseEvent } from 'react';
@@ -733,7 +735,7 @@ export function RootLayout() {
                   item.to === '/textbook' && showStudentNav ? (
                     <TextbookUpdatesButton
                       key={item.to}
-                      learnerId={syncedProfile?.id ?? authUser?.id}
+                      learnerId={authUser?.learnerId ?? syncedProfile?.id}
                       isActive={item.isActive}
                     />
                   ) : (
@@ -764,18 +766,51 @@ export function RootLayout() {
               <div className="flex items-center gap-2">
                 {canOpenWelcome && (
                   <>
-                    {/* Keyboard shortcut hint - desktop only */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 border rounded">
-                          <Keyboard className="size-3" />
-                          ?
-                        </kbd>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Press ? for help</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    {/* Keyboard shortcuts popup - desktop only */}
+                    <div className="hidden lg:block">
+                      <Popover
+                        triggerLabel="Keyboard shortcuts"
+                        triggerTestId="keyboard-shortcuts-button"
+                        panelTestId="keyboard-shortcuts-panel"
+                        align="end"
+                        triggerClassName={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'touch-manipulation')}
+                        trigger={<Keyboard className="size-4" aria-hidden="true" />}
+                        panelClassName="w-64"
+                      >
+                        {(close) => (
+                          <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Keyboard shortcuts</h3>
+                            <dl className="space-y-2 text-xs">
+                              {[
+                                ['Run query', 'Ctrl+Enter'],
+                                ['Focus problem', 'Ctrl+/'],
+                                ['Close dialogs', 'Esc'],
+                                ['Show help', '?'],
+                              ].map(([label, keys]) => (
+                                <div key={label} className="flex items-center justify-between gap-3">
+                                  <dt className="text-gray-700 dark:text-gray-200">{label}</dt>
+                                  <dd>
+                                    <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-gray-100 font-mono">{keys}</kbd>
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                close();
+                                setShowWelcome(true);
+                              }}
+                            >
+                              <HelpCircle className="size-4 mr-2" aria-hidden="true" />
+                              Open help
+                            </Button>
+                          </div>
+                        )}
+                      </Popover>
+                    </div>
 
                     <Tooltip>
                       <TooltipTrigger asChild>

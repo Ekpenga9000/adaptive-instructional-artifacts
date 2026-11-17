@@ -37,7 +37,6 @@ import {
   GraduationCap,
   Target,
   Settings2,
-  Keyboard,
   Zap,
   Sprout,
   TrendingUp,
@@ -56,6 +55,7 @@ import {
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useOptionalToast } from '../components/ui/toast';
 import { Badge } from '../components/ui/badge';
 import { Popover } from '../components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
@@ -563,7 +563,16 @@ export function LearningInterface() {
   const [lastErrorEventId, setLastErrorEventId] = useState<string | undefined>();
   const [subtypeOverride, setSubtypeOverride] = useState('auto');
   const [escalationTriggered, setEscalationTriggered] = useState(false);
-  const [notesActionMessage, setNotesActionMessage] = useState<string | undefined>();
+  const toastApi = useOptionalToast();
+  const [notesActionMessage, setNotesActionMessageState] = useState<string | undefined>();
+  // Saving to My Textbook is announced with a toast, since the explanation
+  // card is no longer on the Practice page.
+  const setNotesActionMessage = (message: string | undefined) => {
+    setNotesActionMessageState(message);
+    if (message) {
+      toastApi?.addToast({ type: 'success', title: 'Saved to My Textbook', message: message.replace(/^✓\s*/, ''), duration: 5000 });
+    }
+  };
   const [sessionSyncStatus, setSessionSyncStatus] = useState<'checking' | 'confirmed' | 'pending' | 'failed'>('checking');
   const [sessionSyncError, setSessionSyncError] = useState<string | undefined>();
   const [sessionConfigError, setSessionConfigError] = useState<string | undefined>();
@@ -2246,51 +2255,6 @@ export function LearningInterface() {
     });
   };
 
-  const handleAddToNotes = async () => {
-    // Try error-based context first, then fall back to problem concepts
-    let noteSubtype = lastError || resolveLatestProblemErrorSubtype();
-
-    if (!noteSubtype) {
-      // Fall back to the first concept of the current problem
-      // This allows saving notes even when no error has occurred
-      const problemConcepts = currentProblem.concepts;
-      if (problemConcepts && problemConcepts.length > 0) {
-        noteSubtype = problemConcepts[0];
-      }
-    }
-
-    if (!noteSubtype) {
-      setGenerationError('Could not save note: no concept context identified. Try submitting a query or requesting a hint first.');
-      return;
-    }
-    if (!lastError) {
-      setLastError(noteSubtype);
-    }
-
-    const sourceIds = collectNoteEvidenceIds([], { maxInteractions: 12 });
-    setIsGeneratingUnit(true);
-    setGenerationError(undefined);
-    try {
-      const { textbookResult, textbookWriteStatus } = await persistGeneratedUnit(
-        'notebook_unit.v1',
-        sourceIds,
-        noteSubtype,
-        'manual-add-to-notes'
-      );
-      setNotesActionMessage(formatTextbookSaveMessage(
-        textbookResult.unit.title,
-        textbookResult.action,
-        textbookWriteStatus,
-        `✓ Saved "${textbookResult.unit.title}" — find it in My Textbook`,
-        `✓ Updated "${textbookResult.unit.title}" in My Textbook`,
-      ));
-    } catch (error) {
-      setGenerationError((error as Error).message);
-    } finally {
-      setIsGeneratingUnit(false);
-    }
-  };
-
   const buildSessionEndEvent = useCallback((): InteractionEvent | null => {
     if (!learnerId || !sessionId) {
       return null;
@@ -2586,17 +2550,6 @@ export function LearningInterface() {
 
   const latestProblemErrorSubtype = latestProblemErrorEvent?.sqlEngageSubtype || latestProblemErrorEvent?.errorSubtypeId;
   const effectiveLastError = lastError || latestProblemErrorSubtype;
-  // Show Save to Notes when student has engaged with the problem:
-  // 1. After hint escalation with an error (original behavior)
-  // 2. After viewing any hints (student actively sought help)
-  // 3. After solving the problem (student may want to save their learning)
-  const hasViewedHints = problemInteractions.some(i => i.eventType === 'hint_view');
-  const hasSolvedCurrentProblem = isCurrentProblemSolved;
-  const showAddToNotes = 
-    (escalationTriggered && !!effectiveLastError) ||  // Original path
-    hasViewedHints ||                                   // Viewed at least one hint
-    hasSolvedCurrentProblem;                           // Solved the problem
-  
   const errorCount = useMemo(() => 
     problemInteractions.filter(i => i.eventType === 'error').length,
     [problemInteractions]
@@ -2769,7 +2722,7 @@ export function LearningInterface() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen xl:min-h-0 xl:h-full xl:flex xl:flex-col bg-gray-50 dark:bg-gray-900">
         {/* Week 5: Dependency Warning Toast */}
         {showDependencyWarning && (
           <DependencyWarningToast onClose={() => setShowDependencyWarning(false)} />
@@ -2823,7 +2776,7 @@ export function LearningInterface() {
                   type="button"
                   onClick={() => setChatOpen(false)}
                   aria-label="Close chat"
-                  className="rounded p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="rounded p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
                   <X className="size-4" aria-hidden="true" />
                 </button>
@@ -2846,9 +2799,14 @@ export function LearningInterface() {
               aria-label="Ask my textbook"
               aria-expanded={chatOpen}
               data-testid="chat-launcher"
-              className="fixed bottom-6 right-4 z-40 inline-flex size-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
+              className="group fixed bottom-6 right-4 z-40 inline-flex size-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
             >
-              {chatOpen ? <X className="size-6" aria-hidden="true" /> : <MessageCircle className="size-6" aria-hidden="true" />}
+              {chatOpen ? <X className="size-6" aria-hidden="true" /> : <MessageCircle className="size-6 -scale-x-100" aria-hidden="true" />}
+              {!chatOpen && (
+                <span role="tooltip" className="pointer-events-none absolute right-full mr-3 whitespace-nowrap rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  Ask my textbook
+                </span>
+              )}
             </button>
           </>
         )}
@@ -3060,7 +3018,7 @@ export function LearningInterface() {
         </div>
         )}
 
-        <div className="container mx-auto px-4 py-6">
+        <div className="container mx-auto px-4 py-6 xl:flex-1 xl:min-h-0 xl:flex xl:flex-col">
           {/* Concept Learning Banner */}
           {activeConceptId && activeConceptTitle && (
             <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 rounded-r-lg p-4">
@@ -3094,11 +3052,11 @@ export function LearningInterface() {
             </div>
           )}
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:flex-1 xl:min-h-0 xl:grid-rows-[minmax(0,1fr)]">
             {/* Main problem area */}
-            <div className="lg:col-span-2 space-y-4 xl:grid xl:grid-cols-2 xl:gap-4 xl:space-y-0 min-w-0">
+            <div className="lg:col-span-2 space-y-4 xl:grid xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)] xl:gap-4 xl:space-y-0 xl:h-full xl:min-h-0 min-w-0">
               {/* Left sub-column: Problem description + schema */}
-              <div className="space-y-4 xl:max-h-[calc(100vh-200px)] xl:overflow-y-auto">
+              <div className="space-y-4 xl:h-full xl:min-h-0 xl:overflow-y-auto">
                 <Card className="p-6">
                 <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between">
                   <div className="flex-auto min-w-0 space-y-4">
@@ -3375,8 +3333,8 @@ export function LearningInterface() {
               </Card>
             </div>
 
-            <div className="xl:h-[calc(100vh-200px)]">
-              <div className="h-[300px] sm:h-[350px] md:h-[450px] lg:h-[500px] max-h-[65vh] xl:h-full xl:max-h-full">
+            <div className="xl:h-full xl:min-h-0">
+              <div className="h-[300px] sm:h-[350px] md:h-[450px] lg:h-[500px] max-h-[65vh] xl:h-full xl:max-h-none">
                 <SQLEditor
                   key={currentProblem.id}
                   problem={currentProblem}
@@ -3390,7 +3348,7 @@ export function LearningInterface() {
           </div>
 
           {/* Sidebar with hints */}
-            <div className="space-y-4 min-w-0">
+            <div className="space-y-4 min-w-0 xl:h-full xl:min-h-0 xl:overflow-y-auto">
               <HintSystem
                 key={`${learnerId}:${sessionId}:${currentProblem.id}:${instructorSubtypeOverride || 'auto'}`}
                 sessionId={sessionId}
@@ -3407,16 +3365,6 @@ export function LearningInterface() {
                 isExplanationGenerating={isGeneratingUnit}
                 isEditorEmpty={isSqlEditorEmpty(sqlDraft)}
               />
-
-              {showAddToNotes && (
-                <GeneratedExplanationCard
-                  unit={latestGeneratedUnit}
-                  isGeneratingUnit={isGeneratingUnit}
-                  generationError={generationError}
-                  notesActionMessage={notesActionMessage}
-                  onSave={handleAddToNotes}
-                />
-              )}
 
               {/* Week 5: Progress Hint - subtle, below hint panel */}
               {isStudent && progressHint && (
@@ -3635,23 +3583,6 @@ export function LearningInterface() {
               </Card>
               )}
 
-              {/* Keyboard Shortcuts Help */}
-              <Card className="p-4 bg-slate-50 border-slate-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <Keyboard className="size-4 text-slate-600" />
-                  <h3 className="font-semibold text-sm text-slate-700">Keyboard Shortcuts</h3>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Run query</span>
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 font-mono text-xs shadow-sm">Ctrl+Enter</kbd>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600">Focus problem</span>
-                    <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 font-mono text-xs shadow-sm">Ctrl+/</kbd>
-                  </div>
-                </div>
-              </Card>
             </div>
           </div>
         </div>
