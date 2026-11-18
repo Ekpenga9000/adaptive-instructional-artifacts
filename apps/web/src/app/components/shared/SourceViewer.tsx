@@ -242,8 +242,12 @@ function PassageCard({
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <FileText className="size-3" />
           <span className="font-medium">{passage.docId}</span>
-          <span className="text-gray-300">|</span>
-          <span>Page {passage.page}</span>
+          {passage.page > 0 && (
+            <>
+              <span className="text-gray-300">|</span>
+              <span>Page {passage.page}</span>
+            </>
+          )}
           {isGrounded ? (
             <span className="ml-1 inline-flex items-center rounded-full bg-green-50 dark:bg-green-950/40 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-300" title="Actual PDF content retrieved">
               ✓ Grounded

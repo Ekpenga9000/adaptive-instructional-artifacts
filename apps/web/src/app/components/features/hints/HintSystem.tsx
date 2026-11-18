@@ -203,7 +203,8 @@ export function HintSystem({
   
   // Guidance Ladder constants - now profile-aware (Week 5)
   // Get threshold from profile or use defaults (adaptive: 3 hints)
-  const maxHintLevel = escalationProfile?.triggers.rungExhausted ?? 3;
+  // Hint levels are 1-3 in the research contract, so never allow a 4th hint level.
+  const maxHintLevel = Math.min(3, escalationProfile?.triggers.rungExhausted ?? 3);
   const autoEscalationThreshold = maxHintLevel + 1; // Threshold is one past max hints
   
   const helpFlowKeyRef = useRef('');
@@ -1597,7 +1598,7 @@ export function HintSystem({
                         ) : (
                           <>
                             <ChevronDown className="size-3" />
-                            <span>Textbook Page {pdfPassages[0]?.page}</span>
+                            <span>{pdfPassages[0]?.page && pdfPassages[0].page > 0 ? `Textbook Page ${pdfPassages[0].page}` : 'Textbook Source'}</span>
                             {pdfPassages.length > 1 && ` +${pdfPassages.length - 1}`}
                           </>
                         )}
