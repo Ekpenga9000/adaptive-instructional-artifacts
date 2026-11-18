@@ -1406,53 +1406,17 @@ export function HintSystem({
 
   return (
     <Card className="p-4 space-y-4 shadow-sm" data-testid="hint-panel">
-      {/* Header: title, hint counter and the main hint button, so the button is always visible */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg shrink-0">
-            <Lightbulb className="size-4 text-amber-600 dark:text-amber-300" />
-          </div>
-          <div className="min-w-0">
+      {/* Header: title and the main hint button on the first row, hint toggles and counter on the second */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg shrink-0">
+              <Lightbulb className="size-4 text-amber-600 dark:text-amber-300" />
+            </div>
             <h3 className="font-semibold text-gray-900 dark:text-gray-100">
               {isInstructor ? 'Guidance Ladder' : 'Hints'}
             </h3>
-            <p
-              className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300"
-              data-testid="hint-counter"
-            >
-              <span className="flex items-center gap-1.5" role="group" aria-label="Hints">
-                {[0, 1, 2].map((index) => {
-                  const obtained = index < hintsUsed;
-                  const isOpen = index === openIndex;
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      disabled={!obtained}
-                      onClick={() => setOpenHintIndex(index)}
-                      aria-label={obtained ? `Show hint ${index + 1} of 3${isOpen ? ' (open)' : ''}` : `Hint ${index + 1} of 3 not requested yet`}
-                      aria-pressed={obtained ? isOpen : undefined}
-                      data-testid={`hint-dot-${index + 1}`}
-                      className={cn(
-                        'flex size-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
-                        isOpen
-                          ? 'bg-amber-500 text-gray-900 ring-2 ring-amber-300 ring-offset-1 dark:ring-offset-gray-800'
-                          : obtained
-                            ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 dark:bg-amber-700/60 dark:text-amber-50 dark:hover:bg-amber-600/70'
-                            : 'border border-dashed border-gray-400 text-gray-500 dark:border-gray-500 dark:text-gray-400'
-                      )}
-                    >
-                      {index + 1}
-                    </button>
-                  );
-                })}
-              </span>
-              <span>
-                {showExplanation ? `Explain • ${hintsUsed}/3 hints` : `${hintsUsed}/3 hints`}
-              </span>
-            </p>
           </div>
-        </div>
         <div className="flex shrink-0 items-center gap-2">
           {isInstructor && <RungIndicator rung={currentRung} size="sm" />}
           <Tooltip>
@@ -1506,6 +1470,42 @@ export function HintSystem({
               )}
             </TooltipContent>
           </Tooltip>
+        </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5" data-testid="hint-counter">
+        <span className="flex items-center gap-1.5" role="group" aria-label="Hints">
+          {[0, 1, 2].map((index) => {
+            const obtained = index < hintsUsed;
+            const isOpen = index === openIndex;
+            return (
+              <button
+                key={index}
+                type="button"
+                disabled={!obtained}
+                onClick={() => setOpenHintIndex(index)}
+                aria-label={obtained ? `Show hint ${index + 1} of 3${isOpen ? ' (open)' : ''}` : `Hint ${index + 1} of 3 not requested yet`}
+                aria-pressed={obtained ? isOpen : undefined}
+                data-testid={`hint-dot-${index + 1}`}
+                className={cn(
+                  'flex size-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
+                  isOpen
+                    ? 'bg-amber-500 text-gray-900 ring-2 ring-amber-300 ring-offset-1 dark:ring-offset-gray-800'
+                    : obtained
+                      ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 dark:bg-amber-700/60 dark:text-amber-50 dark:hover:bg-amber-600/70'
+                      : 'border border-dashed border-gray-400 text-gray-500 dark:border-gray-500 dark:text-gray-400'
+                )}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </span>
+          <span className="text-xs text-gray-600 dark:text-gray-300">{`${hintsUsed}/3 hints`}</span>
+          {showExplanation && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+              Explanation
+            </span>
+          )}
         </div>
       </div>
 
