@@ -89,6 +89,10 @@ export function ConceptDetailPage() {
                   <Clock className="w-4 h-4" />
                   {lesson ? getLessonReadTime(lesson) : (concept.estimatedReadTime || Math.max(1, Math.ceil(concept.content.explanation.split(/\s+/).length / 180)))} min read
                 </span>
+                <span className="flex items-center gap-1">
+                  <BookOpen className="w-4 h-4" />
+                  Pages {compactPages(concept.pageNumbers)}
+                </span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${getDifficultyStyle(concept.difficulty)}`}>
                   {concept.difficulty}
                 </span>
@@ -235,6 +239,9 @@ export function ConceptDetailPage() {
               </h3>
               <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
                 {concept.sourceDocId === 'murachs-mysql-3rd-edition' ? "Murach’s MySQL, 3rd edition" : concept.sourceDocId === 'dbms-ramakrishnan-3rd-edition' ? 'Database Management Systems, Ramakrishnan, 3rd edition' : concept.sourceDocId || 'Textbook source'}
+              </p>
+              <p className="text-xs text-blue-600 dark:text-blue-300">
+                Pages: {compactPages(concept.pageNumbers)}
               </p>
             </div>
           </div>
@@ -480,4 +487,16 @@ function getDifficultyLightStyle(difficulty: string): string {
     case 'hard': return 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
     default: return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200';
   }
+}
+
+function compactPages(pages: number[]): string {
+  const sorted = [...new Set(pages)].sort((a, b) => a - b);
+  const ranges: string[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    const start = sorted[i];
+    let end = start;
+    while (sorted[i + 1] === end + 1) end = sorted[++i];
+    ranges.push(start === end ? `${start}` : `${start}–${end}`);
+  }
+  return ranges.join(', ') || 'Not supplied';
 }
