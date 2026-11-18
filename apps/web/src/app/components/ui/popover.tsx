@@ -2,6 +2,8 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 
 import { cn } from './utils';
 
+const EXIT_MS = 200;
+
 interface PopoverProps {
   /** Content of the button that opens the popover. */
   trigger: ReactNode;
@@ -39,6 +41,9 @@ export function Popover({
   onOpenChange,
 }: PopoverProps) {
   const [open, setOpen] = useState(false);
+  // The panel stays mounted briefly after closing so it can slide away.
+  const [mounted, setMounted] = useState(false);
+  const [shown, setShown] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
@@ -75,6 +80,17 @@ export function Popover({
     };
   }, [open, setOpenState]);
 
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      const frame = window.requestAnimationFrame(() => setShown(true));
+      return () => window.cancelAnimationFrame(frame);
+    }
+    setShown(false);
+    const timer = window.setTimeout(() => setMounted(false), EXIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [open]);
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -93,13 +109,16 @@ export function Popover({
       >
         {trigger}
       </button>
-      {open && (
+      {mounted && (
         <div
           id={panelId}
           role="dialog"
+          aria-hidden={!open}
           aria-label={triggerLabel}
           className={cn(
-            'absolute z-50 mt-2 w-[min(92vw,380px)] max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-xl',
+            'absolute z-50 mt-2 origin-top transition duration-200 ease-out motion-reduce:transition-none',
+            shown ? 'translate-y-0 scale-100 opacity-100' : '-translate-y-2 scale-95 opacity-0 pointer-events-none',
+            'w-[min(92vw,380px)] max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-xl',
             align === 'end' ? 'right-0' : 'left-0',
             panelClassName,
           )}

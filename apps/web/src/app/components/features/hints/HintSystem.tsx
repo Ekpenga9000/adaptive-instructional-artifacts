@@ -104,6 +104,9 @@ export function shouldSuppressEscalation(
   return state?.key === key && now - state.timestamp < windowMs;
 }
 
+/** Fired by the mobile hint bar on the Practice page. */
+export const REQUEST_HINT_EVENT = 'sql-adapt-request-hint';
+
 export function HintSystem({ 
   sessionId,
   learnerId, 
@@ -1328,6 +1331,17 @@ export function HintSystem({
     ? orchestrator.makeDecision(profile, scopedInteractions, problemId, { sessionConfig })
     : { decision: 'show_hint' as const, reasoning: 'Learner profile unavailable' };
 
+  // The mobile "Get hint" bar asks for a hint through this event.
+  const requestHintRef = useRef(handleRequestHint);
+  requestHintRef.current = handleRequestHint;
+  useEffect(() => {
+    const onRequest = () => {
+      void requestHintRef.current();
+    };
+    window.addEventListener(REQUEST_HINT_EVENT, onRequest);
+    return () => window.removeEventListener(REQUEST_HINT_EVENT, onRequest);
+  }, []);
+
   // Empty state when no profile exists
   if (!profile) {
     return (
@@ -1351,12 +1365,19 @@ export function HintSystem({
   const shouldOfferHintReset =
     hints.length === 0 && (showExplanation || autoEscalationInfo.triggered || hasExplanationHistory);
   const primaryActionLabel = shouldOfferHintReset
-    ? 'Request Hint'
+    ? 'Get hint'
     : nextHelpRequestIndex >= autoEscalationThreshold
-      ? 'Get More Help'
+      ? 'Get more help'
       : hints.length === 0
-        ? 'Request Hint'
-        : 'Next Hint';
+        ? 'Get hint'
+        : 'Next hint';
+  // Hints the student has opened so far (out of 3) for the counter in the header.
+  const hintsUsed = Math.min(hints.length, 3);
+  // Save to Notes only makes sense once there is a hint or explanation to save.
+  const hasSomethingToSave = hints.length > 0 || showExplanation;
+  const actionDisabled = !profile || !sessionId || isProcessingHint || isExplanationGenerating;
+  // Draw the eye to the button until the student has opened a hint.
+  const shouldPulseAction = hints.length === 0 && !actionDisabled;
   // Count hints that have been actually viewed - use hints.length directly to ensure sync
   const hintProgress = showExplanation 
     ? Math.min(hints.length + 1, 4)  // Hints + explanation mode
@@ -1367,23 +1388,80 @@ export function HintSystem({
 
   return (
     <Card className="p-4 space-y-4 shadow-sm" data-testid="hint-panel">
-      {/* Clean header with title and rung */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-            <Lightbulb className="size-4 text-amber-500" />
+      {/* Header: title, hint counter and the main hint button, so the button is always visible */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg shrink-0">
+            <Lightbulb className="size-4 text-amber-600 dark:text-amber-300" />
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Guidance Ladder</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {showExplanation 
-                ? `Explain • ${Math.min(hints.length, 3)}/3`
-                : `Hint ${hintProgress} of 3`
-              }
+          <div className="min-w-0">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+              {isInstructor ? 'Guidance Ladder' : 'Hints'}
+            </h3>
+            <p
+              className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300"
+              data-testid="hint-counter"
+            >
+              <span className="flex items-center gap-1" aria-hidden="true">
+                {[0, 1, 2].map((index) => (
+                  <span
+                    key={index}
+                    className={cn(
+                      'size-2 rounded-full',
+                      index < hintsUsed ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
+                    )}
+                  />
+                ))}
+              </span>
+              <span>
+                {showExplanation ? `Explain • ${hintsUsed}/3 hints` : `${hintsUsed}/3 hints`}
+              </span>
             </p>
           </div>
         </div>
-        <RungIndicator rung={currentRung} size="sm" />
+        <div className="flex shrink-0 items-center gap-2">
+          {isInstructor && <RungIndicator rung={currentRung} size="sm" />}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={handleRequestHint}
+                disabled={actionDisabled}
+                data-testid="hint-action-button"
+                className={cn(
+                  'relative inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900',
+                  actionDisabled
+                    ? 'cursor-not-allowed bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                    : 'bg-amber-500 text-gray-900 hover:bg-amber-400 active:bg-amber-600'
+                )}
+              >
+                {shouldPulseAction && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 rounded-lg bg-amber-400/60 motion-safe:animate-ping"
+                  />
+                )}
+                {isExplanationGenerating ? (
+                  <span className="relative">Preparing…</span>
+                ) : (
+                  <>
+                    {isProcessingHint ? (
+                      <Loader2 className="relative size-4 shrink-0 animate-spin" />
+                    ) : (
+                      <Lightbulb className="relative size-4 shrink-0" />
+                    )}
+                    <span className="relative whitespace-nowrap">{primaryActionLabel}</span>
+                  </>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Get a hint to help solve the problem</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to 3</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Hint Source Status - Shows which resources are being used */}
@@ -1678,32 +1756,8 @@ export function HintSystem({
       />
 
       <div className="flex flex-col gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              onClick={handleRequestHint}
-              variant="outline"
-              className="w-full h-9 text-sm"
-              disabled={!profile || !sessionId || isProcessingHint || isExplanationGenerating}
-              data-testid="hint-action-button"
-            >
-              {isExplanationGenerating ? (
-                <span className="truncate">Preparing your explanation…</span>
-              ) : isProcessingHint ? (
-                <Loader2 className="size-4 mr-2 shrink-0 animate-spin" />
-              ) : (
-                <Lightbulb className="size-4 mr-2 shrink-0" />
-              )}
-              <span className="truncate">{primaryActionLabel}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>Get a hint to help solve the problem</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Progresses through L1 → L2 → L3 hints</p>
-          </TooltipContent>
-        </Tooltip>
         {/* Week 6: Conditionally hide Add to Textbook button if textbookDisabled */}
-        {(!sessionConfig?.textbookDisabled) && (
+        {(!sessionConfig?.textbookDisabled) && hasSomethingToSave && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button

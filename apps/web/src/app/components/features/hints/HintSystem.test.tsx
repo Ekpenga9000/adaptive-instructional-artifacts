@@ -150,7 +150,7 @@ describe('HintSystem quota handling', () => {
       </ToastProvider>,
     );
 
-    await user.click(screen.getByRole('button', { name: /request hint/i }));
+    await user.click(screen.getByRole('button', { name: /get hint/i }));
 
     expect(await screen.findByText('Try selecting only the columns you need.')).toBeTruthy();
     expect(await screen.findByText('Storage Full')).toBeTruthy();
@@ -190,7 +190,7 @@ describe('HintSystem quota handling', () => {
       </ToastProvider>,
     );
 
-    const button = screen.getByRole('button', { name: /preparing your explanation/i });
+    const button = screen.getByRole('button', { name: /preparing/i });
     await user.click(button);
     await user.click(button);
 
@@ -219,6 +219,18 @@ describe('HintSystem quota handling', () => {
     expect(screen.getByTestId('hint-empty-editor-notice')).toBeTruthy();
     expect(mockStorage.logGuidanceRequest).not.toHaveBeenCalled();
     expect(mockStorage.logGuidanceView).not.toHaveBeenCalled();
+  });
+
+  it('shows the Get hint button and a 0/3 counter at the top, with no Save to Notes before any hint', () => {
+    render(
+      <ToastProvider>
+        <HintSystem learnerId="learner-1" problemId="problem-1" sessionId="session-1" recentInteractions={[]} />
+      </ToastProvider>,
+    );
+    expect(screen.getByTestId('hint-action-button').textContent).toMatch(/get hint/i);
+    expect(screen.getByTestId('hint-counter').textContent).toContain('0/3 hints');
+    expect(screen.queryByText('Save to Notes')).toBeNull();
+    expect(screen.queryByText('Guidance Ladder')).toBeNull();
   });
 
   it('does not show hint step labels or the source status line to students', () => {
@@ -264,7 +276,7 @@ describe('HintSystem quota handling', () => {
       </ToastProvider>,
     );
 
-    const requestButton = screen.getByRole('button', { name: /request hint/i });
+    const requestButton = screen.getByRole('button', { name: /get hint/i });
     await user.click(requestButton);
     await screen.findByText('Try selecting only the columns you need.');
     await user.click(screen.getByRole('button', { name: /next hint/i }));

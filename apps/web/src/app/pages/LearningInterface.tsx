@@ -47,6 +47,7 @@ import {
   ChevronRight,
   XCircle,
   MessageCircle,
+  Lightbulb,
   ChevronDown,
   ChevronUp,
   LayoutDashboard
@@ -62,8 +63,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/toolti
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../components/ui/utils';
 import { DEFAULT_SQL_EDITOR_CODE, SQLEditor } from '../components/features/sql/SQLEditor';
-import { HintSystem, isSqlEditorEmpty } from '../components/features/hints/HintSystem';
-import { SurveyInvitationLinks } from '../components/features/surveys/SurveyInvitationLinks';
+import { HintSystem, isSqlEditorEmpty, REQUEST_HINT_EVENT } from '../components/features/hints/HintSystem';
 import { ConceptCoverage } from '../components/features/research/ConceptCoverage';
 import { AskMyTextbookChat } from '../components/features/chat/AskMyTextbookChat';
 import { ReinforcementPrompt } from '../components/features/reinforcement/ReinforcementPrompt';
@@ -621,6 +621,17 @@ export function LearningInterface() {
       return true;
     }
   });
+  // Menus inside the strip may overflow it, but only once it has finished opening.
+  const stripCollapsed = isStudent && headerCollapsed;
+  const [stripSettledOpen, setStripSettledOpen] = useState(!stripCollapsed);
+  useEffect(() => {
+    if (stripCollapsed) {
+      setStripSettledOpen(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setStripSettledOpen(true), 320);
+    return () => window.clearTimeout(timer);
+  }, [stripCollapsed]);
   const toggleHeaderCollapsed = useCallback(() => {
     setHeaderCollapsed((previous) => {
       const next = !previous;
@@ -2799,7 +2810,7 @@ export function LearningInterface() {
               aria-label="Ask my textbook"
               aria-expanded={chatOpen}
               data-testid="chat-launcher"
-              className="group fixed bottom-6 right-4 z-40 inline-flex size-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
+              className="group fixed bottom-20 lg:bottom-6 right-4 z-40 inline-flex size-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2"
             >
               {chatOpen ? <X className="size-6" aria-hidden="true" /> : <MessageCircle className="size-6 -scale-x-100" aria-hidden="true" />}
               {!chatOpen && (
@@ -2809,6 +2820,24 @@ export function LearningInterface() {
               )}
             </button>
           </>
+        )}
+
+        {/* Phones and tablets: a hint button that stays on screen, so students do not scroll down to the hint card. */}
+        {isStudent && (
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-2 shadow-[0_-2px_8px_rgba(0,0,0,0.08)] backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 lg:hidden">
+            <button
+              type="button"
+              data-testid="mobile-hint-bar-button"
+              onClick={() => {
+                window.dispatchEvent(new Event(REQUEST_HINT_EVENT));
+                document.querySelector('[data-testid="hint-panel"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-amber-500 text-sm font-semibold text-gray-900 shadow-sm hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+            >
+              <Lightbulb className="size-4" aria-hidden="true" />
+              Get a hint
+            </button>
+          </div>
         )}
 
         {isStudent && (
@@ -2830,7 +2859,15 @@ export function LearningInterface() {
           </>
         )}
 
-        {!(isStudent && headerCollapsed) && (
+        {/* The strip folds away with a height transition instead of popping in and out. */}
+        <div
+          className={cn(
+            "grid shrink-0 transition-[grid-template-rows,opacity,visibility] duration-300 ease-out motion-reduce:transition-none",
+            isStudent && headerCollapsed ? "grid-rows-[0fr] opacity-0 invisible" : "grid-rows-[1fr] opacity-100 visible"
+          )}
+          aria-hidden={isStudent && headerCollapsed ? true : undefined}
+        >
+        <div className={cn("min-h-0", stripSettledOpen ? "overflow-visible" : "overflow-hidden")}>
         <div id="practice-header-strip" className={cn(
           "border-b",
           isStudent ? "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700" : "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800"
@@ -2873,8 +2910,7 @@ export function LearningInterface() {
                 </div>
               )}
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                {/* Provisional self-initiated survey links; this is intentionally non-blocking pending demo confirmation. */}
-                {isStudent && <SurveyInvitationLinks />}
+                {/* Survey links now live in the top navigation bar so they never hide with this strip. */}
                 {/* Enhanced Session Timer */}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -3016,9 +3052,10 @@ export function LearningInterface() {
             </div>
           </div>
         </div>
-        )}
+        </div>
+        </div>
 
-        <div className="container mx-auto px-4 py-6 xl:flex-1 xl:min-h-0 xl:flex xl:flex-col">
+        <div className="container mx-auto px-4 pt-6 pb-24 lg:pb-6 xl:flex-1 xl:min-h-0 xl:flex xl:flex-col">
           {/* Concept Learning Banner */}
           {activeConceptId && activeConceptTitle && (
             <div className="mb-6 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 rounded-r-lg p-4">
@@ -3054,7 +3091,7 @@ export function LearningInterface() {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:flex-1 xl:min-h-0 xl:grid-rows-[minmax(0,1fr)]">
             {/* Main problem area */}
-            <div className="lg:col-span-2 space-y-4 xl:grid xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)] xl:gap-4 xl:space-y-0 xl:h-full xl:min-h-0 min-w-0">
+            <div className="lg:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 xl:grid-rows-[minmax(0,1fr)] xl:h-full xl:min-h-0 min-w-0">
               {/* Left sub-column: Problem description + schema */}
               <div className="space-y-4 xl:h-full xl:min-h-0 xl:overflow-y-auto">
                 <Card className="p-6">

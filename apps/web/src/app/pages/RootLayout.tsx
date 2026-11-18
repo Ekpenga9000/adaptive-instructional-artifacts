@@ -6,6 +6,7 @@ import { Compass, BookOpen, BarChart3, FlaskConical, Code, HelpCircle, Menu, X, 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { MouseEvent } from 'react';
 import { TextbookUpdatesButton } from '../components/shared/TextbookUpdatesButton';
+import { SurveyInvitationLinks } from '../components/features/surveys/SurveyInvitationLinks';
 import { WelcomeModal } from '../components/shared/WelcomeModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../components/ui/tooltip';
 import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
@@ -711,6 +712,92 @@ export function RootLayout() {
         <nav className="border-b bg-white dark:bg-gray-900 dark:border-gray-700 sticky top-0 z-40">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-2">
+        {/* Mobile menu */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild className="md:hidden">
+            <Button variant="ghost" size="sm" className="touch-manipulation" aria-label="Open navigation menu">
+              <Menu className="size-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[85vw] max-w-[350px]">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between py-4 border-b">
+                <span className="font-bold text-lg">Menu</span>
+              </div>
+              <div className="flex-1 py-4 space-y-2">
+                {navItems.map((item) => (
+                  <Button
+                    key={item.to}
+                    variant={item.isActive ? 'default' : 'ghost'}
+                    size="lg"
+                    className="w-full justify-start touch-manipulation"
+                    asChild
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Link to={item.to} className="flex items-center gap-3">
+                      <item.icon className="size-5" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </Button>
+                ))}
+                {showStudentNav && (
+                  <div className="px-1 pt-2" onClick={() => setMobileMenuOpen(false)}>
+                    <SurveyInvitationLinks variant="nav" />
+                  </div>
+                )}
+              </div>
+              <div className="py-4 border-t space-y-2">
+                {isInstructor && (
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    className="w-full justify-start touch-manipulation"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleSwitchUser();
+                    }}
+                    disabled={isLoggingOut}
+                  >
+                    <Users className="size-5 mr-3" />
+                    <span>Switch User</span>
+                  </Button>
+                )}
+                {isSignedIn && (
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    className="w-full justify-start touch-manipulation text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={(event) => {
+                      void handleLogoutClick(event);
+                    }}
+                    disabled={isLoggingOut || isCheckingLogoutSurvey}
+                  >
+                    <LogOut className="size-5 mr-3" />
+                    <span>{isLoggingOut ? 'Signing Out...' : 'Logout'}</span>
+                  </Button>
+                )}
+                <div className="px-2 text-sm text-gray-600 dark:text-gray-300">
+                  <p className="font-medium mb-2">Keyboard Shortcuts</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span>Ctrl + Enter</span>
+                      <span className="text-gray-400 dark:text-gray-500">Run query</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Esc</span>
+                      <span className="text-gray-400 dark:text-gray-500">Close modals</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>?</span>
+                      <span className="text-gray-400 dark:text-gray-500">Show help</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
               {/* Logo */}
               <Link to={isSignedIn ? (isInstructor ? '/instructor-dashboard' : '/practice') : '/'} className="flex items-center gap-2 shrink-0">
                 <Code className="size-6 text-blue-600" />
@@ -728,6 +815,7 @@ export function RootLayout() {
                   </span>
                 )}
               </Link>
+              </div>
 
               {/* Desktop Navigation */}
               <div className="hidden md:flex items-center gap-1">
@@ -760,6 +848,7 @@ export function RootLayout() {
                   </Tooltip>
                   )
                 ))}
+                {showStudentNav && <SurveyInvitationLinks variant="nav" />}
               </div>
 
               {/* Right side actions */}
@@ -881,86 +970,6 @@ export function RootLayout() {
                   </>
                 )}
 
-                {/* Mobile menu */}
-                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                  <SheetTrigger asChild className="md:hidden">
-                    <Button variant="ghost" size="sm" className="touch-manipulation" aria-label="Open navigation menu">
-                      <Menu className="size-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-[85vw] max-w-[350px]">
-                    <div className="flex flex-col h-full">
-                      <div className="flex items-center justify-between py-4 border-b">
-                        <span className="font-bold text-lg">Menu</span>
-                      </div>
-                      <div className="flex-1 py-4 space-y-2">
-                        {navItems.map((item) => (
-                          <Button
-                            key={item.to}
-                            variant={item.isActive ? 'default' : 'ghost'}
-                            size="lg"
-                            className="w-full justify-start touch-manipulation"
-                            asChild
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            <Link to={item.to} className="flex items-center gap-3">
-                              <item.icon className="size-5" />
-                              <span>{item.label}</span>
-                            </Link>
-                          </Button>
-                        ))}
-                      </div>
-                      <div className="py-4 border-t space-y-2">
-                        {isInstructor && (
-                          <Button
-                            variant="ghost"
-                            size="lg"
-                            className="w-full justify-start touch-manipulation"
-                            onClick={() => {
-                              setMobileMenuOpen(false);
-                              handleSwitchUser();
-                            }}
-                            disabled={isLoggingOut}
-                          >
-                            <Users className="size-5 mr-3" />
-                            <span>Switch User</span>
-                          </Button>
-                        )}
-                        {isSignedIn && (
-                          <Button
-                            variant="ghost"
-                            size="lg"
-                            className="w-full justify-start touch-manipulation text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={(event) => {
-                              void handleLogoutClick(event);
-                            }}
-                            disabled={isLoggingOut || isCheckingLogoutSurvey}
-                          >
-                            <LogOut className="size-5 mr-3" />
-                            <span>{isLoggingOut ? 'Signing Out...' : 'Logout'}</span>
-                          </Button>
-                        )}
-                        <div className="px-2 text-sm text-gray-600 dark:text-gray-300">
-                          <p className="font-medium mb-2">Keyboard Shortcuts</p>
-                          <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span>Ctrl + Enter</span>
-                              <span className="text-gray-400 dark:text-gray-500">Run query</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Esc</span>
-                              <span className="text-gray-400 dark:text-gray-500">Close modals</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>?</span>
-                              <span className="text-gray-400 dark:text-gray-500">Show help</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
               </div>
             </div>
           </div>
