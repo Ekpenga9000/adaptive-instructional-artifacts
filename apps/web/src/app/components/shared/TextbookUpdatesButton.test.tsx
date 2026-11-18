@@ -46,23 +46,35 @@ describe('TextbookUpdatesButton', () => {
   });
 
   it('shows a counter for notes saved after the last look', () => {
-    localStorage.setItem('sql-adapt-textbook-last-seen:learner-1', '100');
+    localStorage.setItem('sql-adapt-textbook-seen:learner-1', JSON.stringify({ old: 50 }));
     mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300), note('old', 50)]);
     renderButton();
     expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('2');
     expect(screen.getByRole('button', { name: /2 new updates/i })).toBeTruthy();
   });
 
-  it('opens a quick view and clears the counter', async () => {
+  it('opens a quick view without clearing the counter, then lowers it when a note is opened', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('sql-adapt-textbook-last-seen:learner-1', '100');
-    mocks.getTextbook.mockReturnValue([note('a', 200)]);
+    localStorage.setItem('sql-adapt-textbook-seen:learner-1', JSON.stringify({}));
+    mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300)]);
     renderButton();
+    expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('2');
 
     await user.click(screen.getByTestId('textbook-updates-button'));
-
     expect(screen.getByTestId('textbook-updates-panel').textContent).toContain('Note a');
-    expect(screen.getByTestId('textbook-updates-open')).toBeTruthy();
+    expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('2');
+
+    await user.click(screen.getByText('Note a'));
+    expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('1');
+  });
+
+  it('clears the whole counter when My Textbook is opened', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('sql-adapt-textbook-seen:learner-1', JSON.stringify({}));
+    mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300)]);
+    renderButton();
+    await user.click(screen.getByTestId('textbook-updates-button'));
+    await user.click(screen.getByTestId('textbook-updates-open'));
     expect(screen.queryByTestId('textbook-updates-badge')).toBeNull();
   });
 });

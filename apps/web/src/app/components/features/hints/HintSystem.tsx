@@ -4,7 +4,7 @@ import { Button } from '../../ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../ui/tooltip';
 import DOMPurify from 'dompurify';
 
-import { Lightbulb, FileText, ChevronDown, ChevronUp, BookOpen, Loader2, HelpCircle, Sparkles, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Lightbulb, FileText, ChevronDown, ChevronUp, BookOpen, Loader2, HelpCircle, Sparkles, AlertCircle, ThumbsUp, ThumbsDown, Check } from 'lucide-react';
 import { HelpEventType, InteractionEvent } from '../../../types';
 import { orchestrator } from '../../../lib/adaptive-orchestrator';
 import { storage } from '../../../lib/storage';
@@ -132,6 +132,10 @@ export function HintSystem({
   const [conceptIds, setConceptIds] = useState<string[]>([]);
   const [showSourceViewer, setShowSourceViewer] = useState(false);
   const [isAddingToTextbook, setIsAddingToTextbook] = useState(false);
+  // How many hints were in the note the learner saved. Save to Notes stays off until a newer hint exists.
+  const [savedHintCount, setSavedHintCount] = useState<number | null>(null);
+  // Which hint is open. Null means "the newest one".
+  const [openHintIndex, setOpenHintIndex] = useState<number | null>(null);
   const [saveToNotesError, setSaveToNotesError] = useState<string | null>(null);
   const [isProcessingHint, setIsProcessingHint] = useState(false);
   const [hintRuntimeError, setHintRuntimeError] = useState<string | null>(null);
@@ -368,6 +372,7 @@ export function HintSystem({
         // using whatever subtype context it has available.
         onEscalate?.([], subtypeForSaveWithFallback || undefined);
       }
+      setSavedHintCount(hints.length);
     } catch (err) {
       setSaveToNotesError((err as Error).message || 'Failed to save note. Please try again.');
     } finally {
@@ -1332,6 +1337,11 @@ export function HintSystem({
     ? orchestrator.makeDecision(profile, scopedInteractions, problemId, { sessionConfig })
     : { decision: 'show_hint' as const, reasoning: 'Learner profile unavailable' };
 
+  // Show the newest hint whenever a new one arrives.
+  useEffect(() => {
+    setOpenHintIndex(null);
+  }, [hints.length]);
+
   // The mobile "Get hint" bar asks for a hint through this event.
   const requestHintRef = useRef(handleRequestHint);
   requestHintRef.current = handleRequestHint;
@@ -1376,9 +1386,16 @@ export function HintSystem({
   const hintsUsed = Math.min(hints.length, 3);
   // Save to Notes only makes sense once there is a hint or explanation to save.
   const hasSomethingToSave = hints.length > 0 || showExplanation;
-  const actionDisabled = !profile || !sessionId || isProcessingHint || isExplanationGenerating;
+  // The full explanation is saved to My Textbook automatically, once per problem.
+  // After that, more help and saving would only add duplicate notes.
+  const helpExhausted = showExplanation || hasExplanationHistory;
+  const hintsAlreadySaved = savedHintCount !== null && savedHintCount >= hints.length;
+  const saveToNotesDone = helpExhausted || hintsAlreadySaved;
+  const actionDisabled = !profile || !sessionId || isProcessingHint || isExplanationGenerating || helpExhausted;
+  const openIndex = hints.length === 0 ? -1 : Math.min(openHintIndex ?? hints.length - 1, hints.length - 1);
   // Draw the eye to the button until the student has opened a hint.
   const shouldPulseAction = hints.length === 0 && !actionDisabled;
+  const actionLabel = helpExhausted ? 'Explanation saved' : primaryActionLabel;
   // Count hints that have been actually viewed - use hints.length directly to ensure sync
   const hintProgress = showExplanation 
     ? Math.min(hints.length + 1, 4)  // Hints + explanation mode
@@ -1403,16 +1420,32 @@ export function HintSystem({
               className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300"
               data-testid="hint-counter"
             >
-              <span className="flex items-center gap-1" aria-hidden="true">
-                {[0, 1, 2].map((index) => (
-                  <span
-                    key={index}
-                    className={cn(
-                      'size-2 rounded-full',
-                      index < hintsUsed ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
-                    )}
-                  />
-                ))}
+              <span className="flex items-center gap-1.5" role="group" aria-label="Hints">
+                {[0, 1, 2].map((index) => {
+                  const obtained = index < hintsUsed;
+                  const isOpen = index === openIndex;
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      disabled={!obtained}
+                      onClick={() => setOpenHintIndex(index)}
+                      aria-label={obtained ? `Show hint ${index + 1} of 3${isOpen ? ' (open)' : ''}` : `Hint ${index + 1} of 3 not requested yet`}
+                      aria-pressed={obtained ? isOpen : undefined}
+                      data-testid={`hint-dot-${index + 1}`}
+                      className={cn(
+                        'flex size-6 items-center justify-center rounded-full text-[11px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
+                        isOpen
+                          ? 'bg-amber-500 text-gray-900 ring-2 ring-amber-300 ring-offset-1 dark:ring-offset-gray-800'
+                          : obtained
+                            ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 dark:bg-amber-700/60 dark:text-amber-50 dark:hover:bg-amber-600/70'
+                            : 'border border-dashed border-gray-400 text-gray-500 dark:border-gray-500 dark:text-gray-400'
+                      )}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
               </span>
               <span>
                 {showExplanation ? `Explain • ${hintsUsed}/3 hints` : `${hintsUsed}/3 hints`}
@@ -1433,7 +1466,7 @@ export function HintSystem({
                   'relative inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900',
                   actionDisabled
-                    ? 'cursor-not-allowed bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                    ? 'cursor-not-allowed bg-gray-200 text-gray-600 opacity-60 dark:bg-gray-700 dark:text-gray-300'
                     : 'bg-amber-500 text-gray-900 hover:bg-amber-400 active:bg-amber-600'
                 )}
               >
@@ -1449,17 +1482,28 @@ export function HintSystem({
                   <>
                     {isProcessingHint ? (
                       <Loader2 className="relative size-4 shrink-0 animate-spin" />
+                    ) : helpExhausted ? (
+                      <Check className="relative size-4 shrink-0" />
                     ) : (
                       <Lightbulb className="relative size-4 shrink-0" />
                     )}
-                    <span className="relative whitespace-nowrap">{primaryActionLabel}</span>
+                    <span className="relative whitespace-nowrap">{actionLabel}</span>
                   </>
                 )}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>Get a hint to help solve the problem</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to 3</p>
+              {helpExhausted ? (
+                <>
+                  <p>You have used the full explanation for this problem</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">It was saved to My Textbook</p>
+                </>
+              ) : (
+                <>
+                  <p>Get a hint to help solve the problem</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to 3</p>
+                </>
+              )}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1518,18 +1562,11 @@ export function HintSystem({
           </div>
           <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Need help?</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Request a hint to get personalized guidance</p>
-          <div className="mt-3 flex items-center justify-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
-            <span>Progresses through</span>
-            <span className="font-medium text-amber-600 dark:text-amber-400">L1</span>
-            <span>→</span>
-            <span className="font-medium text-amber-600 dark:text-amber-400">L2</span>
-            <span>→</span>
-            <span className="font-medium text-amber-600 dark:text-amber-400">L3</span>
-          </div>
         </div>
       ) : (
         <div className="space-y-3">
           {hints.map((hint, idx) => {
+            if (idx !== openIndex) return null;
             const pdfPassages = hintPdfPassages[idx] || [];
             const hasPdfSources = pdfPassages.length > 0;
             const isExpanded = expandedHintIndex === idx;
@@ -1764,11 +1801,14 @@ export function HintSystem({
             <button
               type="button"
               onClick={handleAddToTextbook}
-              disabled={!profile || !sessionId || isAddingToTextbook}
+              disabled={!profile || !sessionId || isAddingToTextbook || saveToNotesDone}
+              data-testid="save-to-notes-button"
               className={cn(
                 'w-full h-9 text-sm px-2 rounded-md font-medium',
                 'inline-flex items-center justify-center gap-1 transition-colors',
-                (!profile || !sessionId)
+                saveToNotesDone
+                  ? 'bg-purple-600 text-white opacity-50 cursor-not-allowed'
+                  : (!profile || !sessionId)
                   ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   : 'bg-purple-600 text-white hover:bg-purple-700'
               )}
@@ -1780,8 +1820,8 @@ export function HintSystem({
                 </>
               ) : (
                 <>
-                  <FileText className="h-4 w-4" />
-                  <span className="truncate">Save to Notes</span>
+                  {saveToNotesDone ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                  <span className="truncate">{saveToNotesDone ? 'Saved to My Textbook' : 'Save to Notes'}</span>
                 </>
               )}
             </button>

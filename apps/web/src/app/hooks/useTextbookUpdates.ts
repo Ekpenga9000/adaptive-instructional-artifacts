@@ -4,29 +4,41 @@ import { storage, subscribeToSync } from '../lib/storage';
 import {
   TEXTBOOK_CHANGED_EVENT,
   countTextbookUpdates,
-  getTextbookLastSeen,
+  getSeenVersions,
   latestTextbookUnits,
-  markTextbookSeen,
+  markUnitsSeen,
+  type SeenVersions,
 } from '../lib/storage/textbook-updates';
 import type { InstructionalUnit } from '../types';
 
 const POLL_MS = 2500;
 
 export interface TextbookUpdatesState {
-  /** Notes saved or changed since the learner last looked. */
+  /** Notes the learner has not looked at yet. */
   count: number;
   /** Newest notes first. */
   recent: InstructionalUnit[];
-  /** Time the learner last looked (0 if never). */
-  lastSeen: number;
-  /** Mark everything as seen. Returns the previous last-seen time. */
-  markSeen: () => number;
+  /** Which notes the learner has already seen. */
+  seen: SeenVersions;
+  /** Mark one note as seen (the counter goes down by one). */
+  markUnitSeen: (unitId: string) => void;
+  /** Mark every note as seen (the counter goes to zero). */
+  markAllSeen: () => void;
+}
+
+function readUnits(learnerId: string): InstructionalUnit[] {
+  try {
+    return storage.getTextbook(learnerId) ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**
  * Tracks new or changed My Textbook notes for the navigation bar counter.
- * The first time it runs for a learner it sets a starting point, so old notes
- * do not show up as new.
+ * The first time it runs for a learner, notes that already exist count as seen,
+ * so old notes do not show up as new. Each note is tracked on its own, so
+ * opening one note lowers the counter by one.
  */
 export function useTextbookUpdates(learnerIdInput: string | undefined): TextbookUpdatesState {
   // The id can be briefly undefined while the profile loads. Keep the last real
@@ -34,37 +46,32 @@ export function useTextbookUpdates(learnerIdInput: string | undefined): Textbook
   const lastIdRef = useRef<string | undefined>(learnerIdInput);
   if (learnerIdInput) lastIdRef.current = learnerIdInput;
   const learnerId = learnerIdInput ?? lastIdRef.current;
-  const [state, setState] = useState<{ count: number; recent: InstructionalUnit[]; lastSeen: number }>({
+
+  const [state, setState] = useState<{ count: number; recent: InstructionalUnit[]; seen: SeenVersions }>({
     count: 0,
     recent: [],
-    lastSeen: 0,
+    seen: {},
   });
 
   const refresh = useCallback(() => {
     if (!learnerId) {
-      setState({ count: 0, recent: [], lastSeen: 0 });
+      setState((prev) => (prev.count === 0 && prev.recent.length === 0 ? prev : { count: 0, recent: [], seen: {} }));
       return;
     }
-    let lastSeen = getTextbookLastSeen(learnerId);
-    if (lastSeen === null) {
-      lastSeen = Date.now();
-      markTextbookSeen(learnerId, lastSeen);
+    const units = readUnits(learnerId);
+    let seen = getSeenVersions(learnerId);
+    if (seen === null) {
+      seen = markUnitsSeen(learnerId, units);
     }
-    let units: InstructionalUnit[] = [];
-    try {
-      units = storage.getTextbook(learnerId) ?? [];
-    } catch {
-      units = [];
-    }
-    const count = countTextbookUpdates(units, lastSeen);
+    const count = countTextbookUpdates(units, seen);
     const recent = latestTextbookUnits(units, 5);
     setState((prev) =>
       prev.count === count &&
-      prev.lastSeen === lastSeen &&
       prev.recent.length === recent.length &&
-      prev.recent.every((unit, index) => unit.id === recent[index].id && unit.updatedTimestamp === recent[index].updatedTimestamp)
+      prev.recent.every((unit, index) => unit.id === recent[index].id && unit.updatedTimestamp === recent[index].updatedTimestamp) &&
+      JSON.stringify(prev.seen) === JSON.stringify(seen)
         ? prev
-        : { count, recent, lastSeen: lastSeen as number },
+        : { count, recent, seen: seen as SeenVersions },
     );
   }, [learnerId]);
 
@@ -91,16 +98,21 @@ export function useTextbookUpdates(learnerIdInput: string | undefined): Textbook
     };
   }, [refresh]);
 
-  const markSeen = useCallback(() => {
-    const previous = state.lastSeen;
-    if (learnerId) {
-      markTextbookSeen(learnerId);
-      // Clear the counter right away instead of waiting for the next refresh.
-      setState((prev) => (prev.count === 0 ? prev : { ...prev, count: 0 }));
+  const markUnitSeen = useCallback(
+    (unitId: string) => {
+      if (!learnerId) return;
+      const unit = readUnits(learnerId).find((candidate) => candidate.id === unitId);
+      if (unit) markUnitsSeen(learnerId, [unit]);
       refresh();
-    }
-    return previous;
-  }, [learnerId, refresh, state.lastSeen]);
+    },
+    [learnerId, refresh],
+  );
 
-  return { ...state, markSeen };
+  const markAllSeen = useCallback(() => {
+    if (!learnerId) return;
+    markUnitsSeen(learnerId, readUnits(learnerId));
+    refresh();
+  }, [learnerId, refresh]);
+
+  return { ...state, markUnitSeen, markAllSeen };
 }

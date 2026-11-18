@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
 import { BookOpen } from 'lucide-react';
 
 import { useTextbookUpdates } from '../../hooks/useTextbookUpdates';
-import { unitActivityTimestamp } from '../../lib/storage/textbook-updates';
+import { isUnitUnseen, unitActivityTimestamp } from '../../lib/storage/textbook-updates';
 import { buttonVariants } from '../ui/button';
 import { Popover } from '../ui/popover';
 import { cn } from '../ui/utils';
@@ -29,21 +29,26 @@ function formatAgo(timestamp: number): string {
  * short quick view with a link to the full My Textbook page.
  */
 export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookUpdatesButtonProps) {
-  const { count, recent, lastSeen, markSeen } = useTextbookUpdates(learnerId);
+  const { count, recent, seen, markUnitSeen, markAllSeen } = useTextbookUpdates(learnerId);
   const location = useLocation();
-  const [highlightSince, setHighlightSince] = useState<number | null>(null);
-  const markSeenRef = useRef(markSeen);
-  markSeenRef.current = markSeen;
+  const markUnitSeenRef = useRef(markUnitSeen);
+  markUnitSeenRef.current = markUnitSeen;
+  const markAllSeenRef = useRef(markAllSeen);
+  markAllSeenRef.current = markAllSeen;
 
-  // Being on the textbook page counts as looking at it.
+  // Looking at a note counts as seeing it. Opening one note lowers the counter
+  // by one; opening the My Textbook page itself clears the rest.
   useEffect(() => {
-    if (location.pathname === '/textbook' && count > 0) {
-      markSeenRef.current();
-    }
-  }, [location.pathname, count]);
+    if (location.pathname !== '/textbook') return;
+    const unitId = new URLSearchParams(location.search).get('unitId');
+    if (unitId) markUnitSeenRef.current(unitId);
+    else markAllSeenRef.current();
+  }, [location.pathname, location.search]);
 
-  // No counter while the learner is on the My Textbook page.
-  const shownCount = location.pathname === '/textbook' ? 0 : count;
+  // No counter on the My Textbook page itself; opening a single note only lowers it by one.
+  const onTextbookPage = location.pathname === '/textbook';
+  const openedSingleNote = onTextbookPage && new URLSearchParams(location.search).has('unitId');
+  const shownCount = onTextbookPage && !openedSingleNote ? 0 : count;
   const label = shownCount > 0
     ? `My Textbook notes, ${shownCount} new ${shownCount === 1 ? 'update' : 'updates'}`
     : 'My Textbook notes';
@@ -58,12 +63,6 @@ export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookU
         buttonVariants({ variant: isActive ? 'default' : 'ghost', size: 'sm' }),
         'touch-manipulation gap-2 border-transparent',
       )}
-      onOpenChange={(open) => {
-        if (open) {
-          setHighlightSince(lastSeen);
-          markSeen();
-        }
-      }}
       trigger={
         <>
           <span className="relative inline-flex">
@@ -87,7 +86,10 @@ export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookU
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">My Textbook</h3>
             <Link
               to="/textbook"
-              onClick={close}
+              onClick={() => {
+                markAllSeen();
+                close();
+              }}
               className="text-xs font-medium text-blue-700 dark:text-blue-300 hover:underline"
               data-testid="textbook-updates-open"
             >
@@ -101,12 +103,15 @@ export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookU
           ) : (
             <ul className="space-y-2">
               {recent.map((unit) => {
-                const isNew = highlightSince !== null && unitActivityTimestamp(unit) > highlightSince;
+                const isNew = isUnitUnseen(unit, seen);
                 return (
                   <li key={unit.id}>
                     <Link
                       to={`/textbook?unitId=${encodeURIComponent(unit.id)}`}
-                      onClick={close}
+                      onClick={() => {
+                        markUnitSeen(unit.id);
+                        close();
+                      }}
                       className="block rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
                       <div className="flex items-center justify-between gap-2">

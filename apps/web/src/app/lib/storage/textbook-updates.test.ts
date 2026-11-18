@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { InstructionalUnit } from '../../types';
 import {
   countTextbookUpdates,
-  getTextbookLastSeen,
+  getSeenVersions,
+  isUnitUnseen,
   latestTextbookUnits,
-  markTextbookSeen,
+  markUnitsSeen,
   unitActivityTimestamp,
 } from './textbook-updates';
 
@@ -31,14 +32,30 @@ describe('textbook update counter helpers', () => {
     expect(unitActivityTimestamp(unit('b', 70))).toBe(70);
   });
 
-  it('counts new and changed notes after the last look, not older ones', () => {
-    const units = [unit('old', 10), unit('new', 200), unit('changed', 10, 300)];
-    expect(countTextbookUpdates(units, 100)).toBe(2);
-    expect(countTextbookUpdates(units, 300)).toBe(0);
+  it('counts notes that were never seen or changed after they were seen', () => {
+    const units = [unit('seen', 10), unit('fresh', 200), unit('changed', 10, 300)];
+    const seen = { seen: 10, changed: 10 };
+    expect(countTextbookUpdates(units, seen)).toBe(2);
+    expect(isUnitUnseen(units[0], seen)).toBe(false);
+    expect(isUnitUnseen(units[1], seen)).toBe(true);
   });
 
   it('does not count archived notes', () => {
-    expect(countTextbookUpdates([unit('gone', 500, undefined, 'archived')], 100)).toBe(0);
+    expect(countTextbookUpdates([unit('gone', 500, undefined, 'archived')], {})).toBe(0);
+  });
+
+  it('is not fooled by timestamps ahead of the local clock', () => {
+    const farFuture = Date.now() + 10 * 60 * 1000;
+    const units = [unit('a', farFuture)];
+    expect(countTextbookUpdates(units, {})).toBe(1);
+    const seen = markUnitsSeen('learner-1', units);
+    expect(countTextbookUpdates(units, seen)).toBe(0);
+  });
+
+  it('lowers the count by one for each note marked as seen', () => {
+    const units = [unit('a', 1), unit('b', 2)];
+    expect(countTextbookUpdates(units, markUnitsSeen('learner-1', [units[0]]))).toBe(1);
+    expect(countTextbookUpdates(units, markUnitsSeen('learner-1', [units[1]]))).toBe(0);
   });
 
   it('returns the newest notes first', () => {
@@ -46,10 +63,10 @@ describe('textbook update counter helpers', () => {
     expect(latest.map((u) => u.id)).toEqual(['b', 'c']);
   });
 
-  it('remembers the last look per learner', () => {
-    expect(getTextbookLastSeen('learner-1')).toBeNull();
-    markTextbookSeen('learner-1', 1234);
-    expect(getTextbookLastSeen('learner-1')).toBe(1234);
-    expect(getTextbookLastSeen('learner-2')).toBeNull();
+  it('remembers what was seen per learner', () => {
+    expect(getSeenVersions('learner-1')).toBeNull();
+    markUnitsSeen('learner-1', [unit('a', 5)]);
+    expect(getSeenVersions('learner-1')).toEqual({ a: 5 });
+    expect(getSeenVersions('learner-2')).toBeNull();
   });
 });

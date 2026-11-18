@@ -3180,6 +3180,15 @@ export function LearningInterface() {
                     <SelectTrigger className="min-w-0 flex-1 w-auto max-w-full" data-testid="problem-select-trigger">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <span className="truncate">{currentProblem.title}</span>
+                        {isProblemSolved(currentProblem.id) && (
+                          <span
+                            data-testid="problem-solved-badge"
+                            className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-200"
+                          >
+                            <Check className="size-2.5" aria-hidden="true" />
+                            Solved
+                          </span>
+                        )}
                         <Badge variant="outline" className="text-[10px] px-1 shrink-0 hidden sm:inline-flex" title="Problems solved">
                           {solvedCount} of {totalProblems} solved
                         </Badge>
@@ -3213,7 +3222,10 @@ export function LearningInterface() {
                                           {problem.title}
                                         </span>
                                         {solved && (
-                                          <Check className="size-3.5 text-green-600 dark:text-green-300 shrink-0" />
+                                          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-200">
+                                            <Check className="size-2.5" aria-hidden="true" />
+                                            Solved
+                                          </span>
                                         )}
                                       </div>
                                       <span className="text-xs text-gray-500 dark:text-gray-400">

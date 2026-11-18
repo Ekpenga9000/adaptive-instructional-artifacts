@@ -233,6 +233,17 @@ describe('HintSystem quota handling', () => {
     expect(screen.queryByText('Guidance Ladder')).toBeNull();
   });
 
+  it('shows three numbered dots, all empty before the first hint', () => {
+    render(
+      <ToastProvider>
+        <HintSystem learnerId="learner-1" problemId="problem-1" sessionId="session-1" recentInteractions={[]} />
+      </ToastProvider>,
+    );
+    for (const n of [1, 2, 3]) {
+      expect((screen.getByTestId(`hint-dot-${n}`) as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
   it('does not show hint step labels or the source status line to students', () => {
     render(
       <ToastProvider>
