@@ -20,17 +20,27 @@ function isCountable(unit: InstructionalUnit): boolean {
 }
 
 /**
- * What the learner has already looked at: note id -> the activity time the
- * learner saw. Comparing per note (not against a clock time) means a clock that
- * runs behind the server cannot leave the counter stuck.
+ * What the learner has already looked at: note id -> a short fingerprint of the
+ * note's title and content. Comparing fingerprints (not clock times) means a
+ * clock that runs behind the server, or a note being saved again with the same
+ * text, cannot bring the counter back after the learner has looked.
  */
-export type SeenVersions = Record<string, number>;
+export type SeenVersions = Record<string, string>;
 
-/** True when the note is new, or changed since the learner last saw it. */
+/** Short fingerprint of what the learner would read in a note. */
+export function unitSignature(unit: Pick<InstructionalUnit, 'title' | 'content'>): string {
+  const text = `${unit.title ?? ''}\u0000${unit.content ?? ''}`;
+  let hash = 5381;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) + hash + text.charCodeAt(i)) | 0;
+  }
+  return `${text.length}:${(hash >>> 0).toString(36)}`;
+}
+
+/** True when the note is new, or its text changed since the learner last saw it. */
 export function isUnitUnseen(unit: InstructionalUnit, seen: SeenVersions): boolean {
   if (!isCountable(unit)) return false;
-  const seenAt = seen[unit.id];
-  return seenAt === undefined || unitActivityTimestamp(unit) > seenAt;
+  return seen[unit.id] !== unitSignature(unit);
 }
 
 /** Number of notes the learner has not looked at yet. */
@@ -46,39 +56,51 @@ export function latestTextbookUnits(units: InstructionalUnit[], limit = 5): Inst
     .slice(0, limit);
 }
 
-const SEEN_PREFIX = 'sql-adapt-textbook-seen:';
+// Note ids are unique, so the "seen" record is shared by every id the app might
+// use for the same learner (auth id, learner id, profile id).
+const SEEN_KEY = 'sql-adapt-textbook-seen';
+const BASELINE_PREFIX = 'sql-adapt-textbook-baseline:';
 
-/** Saved "seen" record for a learner, or null if they have never had one. */
-export function getSeenVersions(learnerId: string): SeenVersions | null {
+function readSeenRecord(): SeenVersions {
   try {
-    const raw = localStorage.getItem(`${SEEN_PREFIX}${learnerId}`);
-    if (!raw) return null;
+    const raw = localStorage.getItem(SEEN_KEY);
+    if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
     const result: SeenVersions = {};
     for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof value === 'number' && Number.isFinite(value)) result[id] = value;
+      if (typeof value === 'string') result[id] = value;
     }
     return result;
   } catch {
-    return null;
+    return {};
   }
 }
 
-function saveSeenVersions(learnerId: string, seen: SeenVersions): void {
+function hasBaseline(learnerId: string): boolean {
   try {
-    localStorage.setItem(`${SEEN_PREFIX}${learnerId}`, JSON.stringify(seen));
+    return localStorage.getItem(`${BASELINE_PREFIX}${learnerId}`) === '1';
   } catch {
-    // Private mode or full storage: the counter simply keeps showing.
+    return false;
   }
+}
+
+/** The saved "seen" record, or null if this learner has never been baselined. */
+export function getSeenVersions(learnerId: string): SeenVersions | null {
+  return hasBaseline(learnerId) ? readSeenRecord() : null;
 }
 
 /** Mark the given notes as seen, keeping what was already seen. Returns the new record. */
 export function markUnitsSeen(learnerId: string, units: InstructionalUnit[]): SeenVersions {
-  const seen = { ...(getSeenVersions(learnerId) ?? {}) };
+  const seen = readSeenRecord();
   for (const unit of units) {
-    seen[unit.id] = Math.max(seen[unit.id] ?? 0, unitActivityTimestamp(unit));
+    seen[unit.id] = unitSignature(unit);
   }
-  saveSeenVersions(learnerId, seen);
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+    localStorage.setItem(`${BASELINE_PREFIX}${learnerId}`, '1');
+  } catch {
+    // Private mode or full storage: the counter simply keeps showing.
+  }
   return seen;
 }

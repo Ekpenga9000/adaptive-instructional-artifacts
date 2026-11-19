@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InstructionalUnit } from '../../types';
+import { markUnitsSeen } from '../../lib/storage/textbook-updates';
 import { TextbookUpdatesButton } from './TextbookUpdatesButton';
 
 const mocks = vi.hoisted(() => ({ getTextbook: vi.fn() }));
@@ -46,7 +47,7 @@ describe('TextbookUpdatesButton', () => {
   });
 
   it('shows a counter for notes saved after the last look', () => {
-    localStorage.setItem('sql-adapt-textbook-seen:learner-1', JSON.stringify({ old: 50 }));
+    markUnitsSeen('learner-1', [note('old', 50)]);
     mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300), note('old', 50)]);
     renderButton();
     expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('2');
@@ -55,7 +56,7 @@ describe('TextbookUpdatesButton', () => {
 
   it('opens a quick view without clearing the counter, then lowers it when a note is opened', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('sql-adapt-textbook-seen:learner-1', JSON.stringify({}));
+    markUnitsSeen('learner-1', []);
     mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300)]);
     renderButton();
     expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('2');
@@ -70,7 +71,7 @@ describe('TextbookUpdatesButton', () => {
 
   it('clears the whole counter when My Textbook is opened', async () => {
     const user = userEvent.setup();
-    localStorage.setItem('sql-adapt-textbook-seen:learner-1', JSON.stringify({}));
+    markUnitsSeen('learner-1', []);
     mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300)]);
     renderButton();
     await user.click(screen.getByTestId('textbook-updates-button'));

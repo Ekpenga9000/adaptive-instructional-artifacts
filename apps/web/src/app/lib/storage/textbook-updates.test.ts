@@ -6,6 +6,7 @@ import {
   isUnitUnseen,
   latestTextbookUnits,
   markUnitsSeen,
+  unitSignature,
   unitActivityTimestamp,
 } from './textbook-updates';
 
@@ -33,8 +34,9 @@ describe('textbook update counter helpers', () => {
   });
 
   it('counts notes that were never seen or changed after they were seen', () => {
-    const units = [unit('seen', 10), unit('fresh', 200), unit('changed', 10, 300)];
-    const seen = { seen: 10, changed: 10 };
+    const units = [unit('seen', 10), unit('fresh', 200), { ...unit('changed', 10, 300), content: 'edited text' }];
+    const base = unit('changed', 10);
+    const seen = { seen: unitSignature(units[0]), changed: unitSignature(base) };
     expect(countTextbookUpdates(units, seen)).toBe(2);
     expect(isUnitUnseen(units[0], seen)).toBe(false);
     expect(isUnitUnseen(units[1], seen)).toBe(true);
@@ -52,6 +54,20 @@ describe('textbook update counter helpers', () => {
     expect(countTextbookUpdates(units, seen)).toBe(0);
   });
 
+  it('does not bring the counter back when a seen note is saved again with the same text', () => {
+    const original = unit('a', 100);
+    const seen = markUnitsSeen('learner-1', [original]);
+    const resaved = { ...original, updatedTimestamp: 999999 };
+    expect(countTextbookUpdates([resaved], seen)).toBe(0);
+  });
+
+  it('keeps the seen record when the learner id string changes', () => {
+    const units = [unit('a', 1)];
+    markUnitsSeen('auth-id', units);
+    markUnitsSeen('profile-id', []);
+    expect(countTextbookUpdates(units, getSeenVersions('profile-id') ?? {})).toBe(0);
+  });
+
   it('lowers the count by one for each note marked as seen', () => {
     const units = [unit('a', 1), unit('b', 2)];
     expect(countTextbookUpdates(units, markUnitsSeen('learner-1', [units[0]]))).toBe(1);
@@ -66,7 +82,7 @@ describe('textbook update counter helpers', () => {
   it('remembers what was seen per learner', () => {
     expect(getSeenVersions('learner-1')).toBeNull();
     markUnitsSeen('learner-1', [unit('a', 5)]);
-    expect(getSeenVersions('learner-1')).toEqual({ a: 5 });
+    expect(getSeenVersions('learner-1')).toEqual({ a: unitSignature(unit('a', 5)) });
     expect(getSeenVersions('learner-2')).toBeNull();
   });
 });
