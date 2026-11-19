@@ -1465,7 +1465,7 @@ export function HintSystem({
               ) : (
                 <>
                   <p>Get a hint to help solve the problem</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to 3</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to 3. The full explanation can be used one time only per problem.</p>
                 </>
               )}
             </TooltipContent>
@@ -1507,6 +1507,11 @@ export function HintSystem({
             </span>
           )}
         </div>
+        {!helpExhausted && (
+          <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-300" data-testid="hint-once-note">
+            After 3 hints, <span className="font-medium">Get more help</span> gives a full explanation saved to My Textbook. You can use it <span className="font-medium">one time only</span> per problem.
+          </p>
+        )}
       </div>
 
       {/* Hint Source Status - Shows which resources are being used */}
