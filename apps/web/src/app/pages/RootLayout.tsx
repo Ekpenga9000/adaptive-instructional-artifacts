@@ -741,7 +741,7 @@ export function RootLayout() {
                     </Link>
                   </Button>
                 ))}
-                {showStudentNav && (
+                {isSignedIn && showStudentNav && (
                   <div className="px-1 pt-2" onClick={() => setMobileMenuOpen(false)}>
                     <SurveyInvitationLinks variant="nav" />
                   </div>
@@ -848,7 +848,7 @@ export function RootLayout() {
                   </Tooltip>
                   )
                 ))}
-                {showStudentNav && <SurveyInvitationLinks variant="nav" />}
+                {isSignedIn && showStudentNav && <SurveyInvitationLinks variant="nav" />}
               </div>
 
               {/* Right side actions */}
