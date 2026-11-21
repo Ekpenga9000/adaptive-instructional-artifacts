@@ -249,7 +249,22 @@ describe('HintSystem quota handling', () => {
     expect(screen.getByTestId('hint-counter').textContent).toContain('0/2 hints');
     expect(screen.getByTestId('hint-dot-2')).toBeTruthy();
     expect(screen.queryByTestId('hint-dot-3')).toBeNull();
-    expect(screen.getByTestId('hint-once-note').textContent).toContain('After 2 hints');
+    expect(screen.getByTestId('hint-once-note').textContent).toContain('You get up to 2 hints');
+  });
+
+  it('once the explanation is used, shows only the hints actually used and says it can come early', () => {
+    const interactions = [
+      { id: 'e1', learnerId: 'learner-1', sessionId: 'session-1', problemId: 'problem-1', eventType: 'hint_view', timestamp: 1, hintLevel: 1 },
+      { id: 'e2', learnerId: 'learner-1', sessionId: 'session-1', problemId: 'problem-1', eventType: 'explanation_view', timestamp: 2 },
+    ] as never;
+    render(
+      <ToastProvider>
+        <HintSystem learnerId="learner-1" problemId="problem-1" sessionId="session-1" recentInteractions={interactions} />
+      </ToastProvider>,
+    );
+    expect(screen.getByTestId('hint-action-button').textContent).toMatch(/explanation saved/i);
+    expect(screen.queryByTestId('hint-dot-3')).toBeNull();
+    expect(screen.getByTestId('hint-counter').textContent).not.toContain('/3');
   });
 
   it('shows three numbered dots, all empty before the first hint', () => {
