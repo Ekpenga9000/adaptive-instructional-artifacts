@@ -1,3 +1,4 @@
+import { FAST_ESCALATOR } from '../../../lib/ml/escalation-profiles';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
@@ -231,6 +232,24 @@ describe('HintSystem quota handling', () => {
     expect(screen.getByTestId('hint-counter').textContent).toContain('0/3 hints');
     expect(screen.queryByText('Save to Notes')).toBeNull();
     expect(screen.queryByText('Guidance Ladder')).toBeNull();
+  });
+
+  it('shows only as many hint dots as the learner profile allows (fast escalator = 2)', () => {
+    render(
+      <ToastProvider>
+        <HintSystem
+          learnerId="learner-1"
+          problemId="problem-1"
+          sessionId="session-1"
+          recentInteractions={[]}
+          escalationProfile={FAST_ESCALATOR}
+        />
+      </ToastProvider>,
+    );
+    expect(screen.getByTestId('hint-counter').textContent).toContain('0/2 hints');
+    expect(screen.getByTestId('hint-dot-2')).toBeTruthy();
+    expect(screen.queryByTestId('hint-dot-3')).toBeNull();
+    expect(screen.getByTestId('hint-once-note').textContent).toContain('After 2 hints');
   });
 
   it('shows three numbered dots, all empty before the first hint', () => {

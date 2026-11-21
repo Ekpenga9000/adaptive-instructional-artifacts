@@ -1465,7 +1465,7 @@ export function HintSystem({
               ) : (
                 <>
                   <p>Get a hint to help solve the problem</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to 3. The full explanation can be used one time only per problem.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to {maxHintLevel}. The full explanation can be used one time only per problem.</p>
                 </>
               )}
             </TooltipContent>
@@ -1474,7 +1474,7 @@ export function HintSystem({
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5" data-testid="hint-counter">
         <span className="flex items-center gap-1.5" role="group" aria-label="Hints">
-          {[0, 1, 2].map((index) => {
+          {Array.from({ length: maxHintLevel }, (_, index) => index).map((index) => {
             const obtained = index < hintsUsed;
             const isOpen = index === openIndex;
             return (
@@ -1483,7 +1483,7 @@ export function HintSystem({
                 type="button"
                 disabled={!obtained}
                 onClick={() => setOpenHintIndex(index)}
-                aria-label={obtained ? `Show hint ${index + 1} of 3${isOpen ? ' (open)' : ''}` : `Hint ${index + 1} of 3 not requested yet`}
+                aria-label={obtained ? `Show hint ${index + 1} of ${maxHintLevel}${isOpen ? ' (open)' : ''}` : `Hint ${index + 1} of ${maxHintLevel} not requested yet`}
                 aria-pressed={obtained ? isOpen : undefined}
                 data-testid={`hint-dot-${index + 1}`}
                 className={cn(
@@ -1500,7 +1500,7 @@ export function HintSystem({
             );
           })}
         </span>
-          <span className="text-xs text-gray-600 dark:text-gray-300">{`${hintsUsed}/3 hints`}</span>
+          <span className="text-xs text-gray-600 dark:text-gray-300">{`${hintsUsed}/${maxHintLevel} ${maxHintLevel === 1 ? 'hint' : 'hints'}`}</span>
           {showExplanation && (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
               Explanation
@@ -1509,7 +1509,7 @@ export function HintSystem({
         </div>
         {!helpExhausted && (
           <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-300" data-testid="hint-once-note">
-            After 3 hints, <span className="font-medium">Get more help</span> gives a full explanation saved to My Textbook. You can use it <span className="font-medium">one time only</span> per problem.
+            After {maxHintLevel} {maxHintLevel === 1 ? 'hint' : 'hints'}, <span className="font-medium">Get more help</span> gives a full explanation saved to My Textbook. You can use it <span className="font-medium">one time only</span> per problem.
           </p>
         )}
       </div>
