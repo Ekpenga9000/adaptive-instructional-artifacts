@@ -614,6 +614,8 @@ export function LearningInterface() {
   const [solvedRefreshKey, setSolvedRefreshKey] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
   // The student header strip starts folded away so the problem, editor and hints get the space.
+  // Mirrors the hint card's main button so the mobile bar cannot request help the card would refuse.
+  const [mobileHintState, setMobileHintState] = useState<{ disabled: boolean; label: string }>({ disabled: false, label: 'Get hint' });
   const [headerCollapsed, setHeaderCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem('sql-adapt-practice-header-collapsed') !== 'false';
@@ -2828,14 +2830,16 @@ export function LearningInterface() {
             <button
               type="button"
               data-testid="mobile-hint-bar-button"
+              disabled={mobileHintState.disabled}
               onClick={() => {
+                if (mobileHintState.disabled) return;
                 window.dispatchEvent(new Event(REQUEST_HINT_EVENT));
                 document.querySelector('[data-testid="hint-panel"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-amber-500 text-sm font-semibold text-gray-900 shadow-sm hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-amber-500 text-sm font-semibold text-gray-900 shadow-sm hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500 disabled:hover:bg-gray-200 dark:focus-visible:ring-offset-gray-900 dark:disabled:bg-gray-700 dark:disabled:text-gray-300"
             >
               <Lightbulb className="size-4" aria-hidden="true" />
-              Get a hint
+              {mobileHintState.label === 'Get hint' ? 'Get a hint' : mobileHintState.label}
             </button>
           </div>
         )}
@@ -3399,6 +3403,7 @@ export function LearningInterface() {
           {/* Sidebar with hints */}
             <div className="space-y-4 min-w-0 xl:h-full xl:min-h-0 xl:overflow-y-auto">
               <HintSystem
+                onActionStateChange={setMobileHintState}
                 key={`${learnerId}:${sessionId}:${currentProblem.id}:${instructorSubtypeOverride || 'auto'}`}
                 sessionId={sessionId}
                 learnerId={learnerId}

@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '../../ui/toast';
-import { buildHintSourceMetadata, HintSystem, isSqlEditorEmpty, shouldSuppressEscalation } from './HintSystem';
+import { buildHintSourceMetadata, HintSystem, isSqlEditorEmpty, REQUEST_HINT_EVENT, shouldSuppressEscalation } from './HintSystem';
 
 const mockStorage = vi.hoisted(() => ({
   getProfile: vi.fn(),
@@ -265,6 +265,33 @@ describe('HintSystem quota handling', () => {
     expect(screen.getByTestId('hint-action-button').textContent).toMatch(/explanation saved/i);
     expect(screen.queryByTestId('hint-dot-3')).toBeNull();
     expect(screen.getByTestId('hint-counter').textContent).not.toContain('/3');
+  });
+
+  it('ignores hint requests from the mobile bar once the explanation has been used, and reports the disabled state', async () => {
+    const interactions = [
+      { id: 'e1', learnerId: 'learner-1', sessionId: 'session-1', problemId: 'problem-1', eventType: 'hint_view', timestamp: 1, hintLevel: 1 },
+      { id: 'e2', learnerId: 'learner-1', sessionId: 'session-1', problemId: 'problem-1', eventType: 'explanation_view', timestamp: 2 },
+    ] as never;
+    const onActionStateChange = vi.fn();
+    render(
+      <ToastProvider>
+        <HintSystem
+          learnerId="learner-1"
+          problemId="problem-1"
+          sessionId="session-1"
+          recentInteractions={interactions}
+          onActionStateChange={onActionStateChange}
+        />
+      </ToastProvider>,
+    );
+
+    expect(onActionStateChange).toHaveBeenCalledWith({ disabled: true, label: 'Explanation saved' });
+
+    window.dispatchEvent(new Event(REQUEST_HINT_EVENT));
+    await Promise.resolve();
+
+    expect(mockStorage.logGuidanceRequest).not.toHaveBeenCalled();
+    expect(mockStorage.logGuidanceView).not.toHaveBeenCalled();
   });
 
   it('shows three numbered dots, all empty before the first hint', () => {

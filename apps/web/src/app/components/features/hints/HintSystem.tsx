@@ -58,6 +58,8 @@ interface HintSystemProps {
   problemId: string;
   /** Error subtype identifier for targeted hints */
   errorSubtypeId?: string;
+  /** Reports the main hint button state, so the mobile hint bar can mirror it. */
+  onActionStateChange?: (state: { disabled: boolean; label: string }) => void;
   /** Whether instructor subtype override is active */
   isSubtypeOverrideActive?: boolean;
   /** Subtype override value from instructor mode */
@@ -107,6 +109,23 @@ export function shouldSuppressEscalation(
 /** Fired by the mobile hint bar on the Practice page. */
 export const REQUEST_HINT_EVENT = 'sql-adapt-request-hint';
 
+/** Tells the parent whether the main hint button is usable (renders nothing). */
+function ActionStateReporter({
+  disabled,
+  label,
+  onChange,
+}: {
+  disabled: boolean;
+  label: string;
+  onChange?: (state: { disabled: boolean; label: string }) => void;
+}) {
+  useEffect(() => {
+    onChange?.({ disabled, label });
+  }, [disabled, label, onChange]);
+  useEffect(() => () => onChange?.({ disabled: false, label: 'Get hint' }), [onChange]);
+  return null;
+}
+
 export function HintSystem({ 
   sessionId,
   learnerId, 
@@ -116,6 +135,7 @@ export function HintSystem({
   knownSubtypeOverride,
   recentInteractions,
   onEscalate,
+  onActionStateChange,
   onInteractionLogged,
   escalationProfile,
   sessionConfig,
@@ -958,6 +978,15 @@ export function HintSystem({
     if (isProcessingHint) {
       return;
     }
+    // The full explanation can be used once per problem. After that no more help is
+    // given, whichever button (desktop or the mobile bar) asked for it.
+    if (
+      showExplanation ||
+      autoEscalationInfo.triggered ||
+      getProblemTrace().some((interaction) => interaction.eventType === 'explanation_view')
+    ) {
+      return;
+    }
     // Nothing written yet: ask the learner to try first. No hint is used.
     if (isEditorEmpty) {
       setShowEmptyEditorNotice(true);
@@ -1406,6 +1435,7 @@ export function HintSystem({
 
   return (
     <Card className="p-4 space-y-4 shadow-sm" data-testid="hint-panel">
+      <ActionStateReporter disabled={actionDisabled} label={actionLabel} onChange={onActionStateChange} />
       {/* Header: title and the main hint button on the first row, hint toggles and counter on the second */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
