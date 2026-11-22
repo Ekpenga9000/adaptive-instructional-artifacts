@@ -171,7 +171,7 @@ export function SourceViewer({
           </div>
           
           {/* Footer with grounding indicator */}
-          <div className="border-t border-gray-100 p-3 bg-gray-50/50">
+          <div className="border-t border-gray-100 p-3 bg-gray-50/50 dark:bg-gray-800/60">
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <div className="size-2 rounded-full bg-green-500" />
               <span>Grounded in textbook sources</span>

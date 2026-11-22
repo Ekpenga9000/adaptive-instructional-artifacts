@@ -407,7 +407,7 @@ export function SQLEditor({ problem, code, onExecute, onCodeChange, onReset }: S
     <div className="flex flex-col h-full gap-4">
         <Card className="flex-1 overflow-hidden min-h-[180px]">
           <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b bg-gray-50/50 flex-wrap gap-2">
+            <div className="flex items-center justify-between p-4 border-b bg-gray-50/50 dark:bg-gray-800/60 flex-wrap gap-2">
               <div className="flex gap-2 items-center flex-wrap">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -425,7 +425,7 @@ export function SQLEditor({ problem, code, onExecute, onCodeChange, onReset }: S
                   <TooltipContent side="bottom">
                     <div className="flex items-center gap-2">
                       <span>Run query</span>
-                      <kbd className="px-1.5 py-0.5 text-[10px] bg-gray-100 border rounded">Ctrl+Enter</kbd>
+                      <kbd className="px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600 border rounded">Ctrl+Enter</kbd>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -590,7 +590,7 @@ export function SQLEditor({ problem, code, onExecute, onCodeChange, onReset }: S
               />
             </div>
             {/* Bottom quick-action bar for tablet — always visible below editor */}
-            <div className="lg:hidden border-t p-2 flex justify-center bg-gray-50/50 shrink-0">
+            <div className="lg:hidden border-t p-2 flex justify-center bg-gray-50/50 dark:bg-gray-800/60 shrink-0">
               <Button
                 onClick={handleExecute}
                 disabled={isExecuting || !code.trim() || initStatus !== 'ready'}
@@ -717,7 +717,7 @@ export function SQLEditor({ problem, code, onExecute, onCodeChange, onReset }: S
                         )}
                       </div>
                       
-                      <div className="bg-white border border-red-200 rounded-lg p-3 overflow-x-auto shadow-sm">
+                      <div className="bg-white dark:bg-gray-900 dark:border-red-800 border border-red-200 rounded-lg p-3 overflow-x-auto shadow-sm">
                         <code className="text-sm text-red-700 dark:text-red-300 font-mono whitespace-pre-wrap block">
                           {parsedError?.formattedMessage || result.error}
                         </code>

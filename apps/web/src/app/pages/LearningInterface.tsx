@@ -434,7 +434,7 @@ export function GeneratedExplanationPreview({ unit }: { unit: InstructionalUnit 
   });
 
   return (
-    <div className="max-h-96 overflow-y-auto rounded border bg-slate-50 p-3">
+    <div className="max-h-96 overflow-y-auto rounded border bg-slate-50 dark:bg-gray-800 p-3">
       <p className="text-xs font-medium text-slate-700">{unit.title}</p>
       <div
         className="prose prose-sm mt-2 max-w-none break-words text-slate-700 [&_code]:break-all [&_pre]:whitespace-pre-wrap"
