@@ -137,7 +137,6 @@ export function HintSystem({
   onEscalate,
   onActionStateChange,
   onInteractionLogged,
-  escalationProfile,
   sessionConfig,
   isExplanationGenerating = false,
   isEditorEmpty = false
@@ -228,7 +227,9 @@ export function HintSystem({
   // Guidance Ladder constants - now profile-aware (Week 5)
   // Get threshold from profile or use defaults (adaptive: 3 hints)
   // Hint levels are 1-3 in the research contract, so never allow a 4th hint level.
-  const maxHintLevel = Math.min(3, escalationProfile?.triggers.rungExhausted ?? 3);
+  // Product rule: every problem gives exactly 3 hints. The 4th request gives the full
+  // explanation (once per problem), after which the hint button is disabled.
+  const maxHintLevel = 3;
   const autoEscalationThreshold = maxHintLevel + 1; // Threshold is one past max hints
   
   const helpFlowKeyRef = useRef('');
@@ -1079,14 +1080,19 @@ export function HintSystem({
               sessionConfig: conditionFlags,
             });
 
-        if (decision.action === 'show_explanation') {
+        // The explanation comes on the 4th request (after 3 hints), or immediately in the
+        // explanation-first condition. An earlier "show_explanation" from the adaptive
+        // orchestrator is treated as another hint so students always get all 3 hints.
+        const hintLimitReached = nextHelpRequestIndex >= autoEscalationThreshold;
+        const explanationFirst = Boolean(sessionConfig.immediateExplanationMode);
+        if (hintLimitReached || (decision.action === 'show_explanation' && explanationFirst)) {
           if (!isStaleRequest()) {
             setAutoEscalationInfo({ triggered: true, helpRequestCount: nextHelpRequestIndex });
           }
           await handleShowExplanation('auto', nextHelpRequestIndex, problemTrace, decision);
           return;
         }
-        if (decision.action !== 'stay_hint') {
+        if (decision.action !== 'stay_hint' && decision.action !== 'show_explanation') {
           orchestrationDecisionForHint = decision;
         }
       } else if (nextHelpRequestIndex >= autoEscalationThreshold) {
@@ -1312,39 +1318,7 @@ export function HintSystem({
           sessionId
         });
 
-        // Delay auto-escalation slightly so user can see the L3 hint first
-        clearPendingAutoEscalation();
-        pendingAutoEscalationTimeoutRef.current = window.setTimeout(() => {
-          pendingAutoEscalationTimeoutRef.current = null;
-          if (isStaleRequest()) {
-            return;
-          }
-          setShowExplanation(true);
-          setAutoEscalationInfo({ triggered: true, helpRequestCount: nextHelpRequestIndex });
-          // Re-run canonical orchestrator with updated hint count for canonical RESEARCH-4 fields
-          const traceForDecision = [...problemTrace, hintEvent];
-          const rungExhaustedDecision = sessionConfig
-            ? sessionConfig.conditionId === 'control'
-              ? resolveControlDecision(nextHelpRequestIndex + 1, {
-                  corpusConceptId: null,
-                  errorCountAtDecision: errorCount,
-                  timeToDecision: timeSpent,
-                })
-              : orchestrate({
-                  conceptId: conceptIds[0] || activeHintSubtype || errorSubtypeId || 'unknown',
-                  retryCount: errorCount,
-                  hintCount: hintCount + 1, // include the hint we just showed
-                  elapsedMs: timeSpent,
-                  sessionConfig: resolveConditionFlags(sessionConfig.conditionId, {
-                    textbookDisabled: sessionConfig.textbookDisabled ?? false,
-                    adaptiveLadderDisabled: sessionConfig.adaptiveLadderDisabled ?? false,
-                    immediateExplanationMode: sessionConfig.immediateExplanationMode ?? false,
-                    staticHintMode: sessionConfig.staticHintMode ?? false,
-                  }),
-                })
-            : undefined;
-          void handleShowExplanation('auto', nextHelpRequestIndex + 1, traceForDecision, rungExhaustedDecision);
-        }, 500);
+        // No automatic explanation: the learner asks for it with the 4th request.
       }
     } catch (error) {
       if (!isStaleRequest()) {
@@ -1495,7 +1469,7 @@ export function HintSystem({
               ) : (
                 <>
                   <p>Get a hint to help solve the problem</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to {maxHintLevel}. If you keep getting stuck, the full explanation can arrive sooner. It can be used one time only per problem.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">Each hint gives a bit more help, up to {maxHintLevel}. After that, one full explanation is available, one time only per problem.</p>
                 </>
               )}
             </TooltipContent>
@@ -1532,7 +1506,7 @@ export function HintSystem({
         </span>
           <span className="text-xs text-gray-600 dark:text-gray-300">{helpExhausted
               ? `${hintsUsed} ${hintsUsed === 1 ? 'hint' : 'hints'} used`
-              : `${hintsUsed}/${maxHintLevel} ${maxHintLevel === 1 ? 'hint' : 'hints'}`}</span>
+              : `${hintsUsed}/${maxHintLevel} hints`}</span>
           {showExplanation && (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
               Explanation
@@ -1541,7 +1515,7 @@ export function HintSystem({
         </div>
         {!helpExhausted && (
           <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-300" data-testid="hint-once-note">
-            You get up to {maxHintLevel} {maxHintLevel === 1 ? 'hint' : 'hints'}. If you are still stuck, <span className="font-medium">Get more help</span> gives a full explanation saved to My Textbook, sometimes before your last hint. You can use it <span className="font-medium">one time only</span> per problem.
+            You get {maxHintLevel} hints. After that, <span className="font-medium">Get more help</span> gives a full explanation saved to My Textbook. You can use it <span className="font-medium">one time only</span> per problem.
           </p>
         )}
       </div>
@@ -1844,7 +1818,7 @@ export function HintSystem({
                 'w-full h-9 text-sm px-2 rounded-md font-medium',
                 'inline-flex items-center justify-center gap-1 transition-colors',
                 saveToNotesDone
-                  ? 'bg-purple-600 text-white opacity-50 cursor-not-allowed'
+                  ? 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400 opacity-60 blur-[0.4px] cursor-not-allowed'
                   : (!profile || !sessionId)
                   ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   : 'bg-purple-600 text-white hover:bg-purple-700'

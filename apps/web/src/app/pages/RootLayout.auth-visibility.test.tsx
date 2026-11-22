@@ -9,11 +9,13 @@ const authState = vi.hoisted(() => ({
 const mockNavigate = vi.hoisted(() => vi.fn());
 const mockLogout = vi.hoisted(() => vi.fn(async () => ({ success: true })));
 
+const locationState = vi.hoisted(() => ({ pathname: '/' }));
+
 vi.mock('react-router', () => ({
   Link: ({ children, to, ...props }: { children: React.ReactNode; to: string }) => <a href={to} {...props}>{children}</a>,
   Navigate: () => null,
   Outlet: () => null,
-  useLocation: () => ({ pathname: '/' }),
+  useLocation: () => ({ pathname: locationState.pathname, search: '' }),
   useNavigate: () => mockNavigate,
 }));
 
@@ -115,6 +117,7 @@ describe('RootLayout signed-in visibility', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     })) as unknown as typeof window.matchMedia;
+    locationState.pathname = '/';
     mockNavigate.mockReset();
     mockLogout.mockReset();
     mockLogout.mockResolvedValue({ success: true });
@@ -148,6 +151,7 @@ describe('RootLayout signed-in visibility', () => {
 
   it('shows the role badge and both desktop and mobile Logout controls when signed in', () => {
     authState.user = { learnerId: 'student-1', name: 'Student One', role: 'student' };
+    locationState.pathname = '/practice';
 
     render(<RootLayout />);
 
@@ -168,6 +172,13 @@ describe('RootLayout signed-in visibility', () => {
 
     expect(screen.queryAllByRole('button', { name: 'Logout' })).toHaveLength(0);
     expect(screen.queryByText('Student')).toBeNull();
+    expect(screen.queryAllByTestId('survey-links-stub')).toHaveLength(0);
+  });
+
+  it('never shows survey buttons on the login page, even if a session is still signed in', () => {
+    authState.user = { learnerId: 'student-1', name: 'Student One', role: 'student' };
+    locationState.pathname = '/login';
+    render(<RootLayout />);
     expect(screen.queryAllByTestId('survey-links-stub')).toHaveLength(0);
   });
 });

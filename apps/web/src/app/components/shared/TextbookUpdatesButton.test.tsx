@@ -69,13 +69,13 @@ describe('TextbookUpdatesButton', () => {
     expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('1');
   });
 
-  it('clears the whole counter when My Textbook is opened', async () => {
+  it('does not clear the counter just because My Textbook is opened; each note has to be opened', async () => {
     const user = userEvent.setup();
     markUnitsSeen('learner-1', []);
     mocks.getTextbook.mockReturnValue([note('a', 200), note('b', 300)]);
     renderButton();
     await user.click(screen.getByTestId('textbook-updates-button'));
     await user.click(screen.getByTestId('textbook-updates-open'));
-    expect(screen.queryByTestId('textbook-updates-badge')).toBeNull();
+    expect(screen.getByTestId('textbook-updates-badge').textContent).toBe('2');
   });
 });

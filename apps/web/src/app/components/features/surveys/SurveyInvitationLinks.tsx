@@ -65,8 +65,8 @@ export function SurveyInvitationLinks({ variant = "default" }: { variant?: "defa
             data-testid={`survey-link-${invitation.instance}`}
             className="inline-flex items-center gap-1.5 rounded-md bg-red-700 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-red-300 dark:focus-visible:ring-offset-gray-900">
             <ClipboardCheck className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="hidden xl:inline">{NAV_LABELS[invitation.instance]}</span>
-            <span className="xl:hidden">{invitation.instance === "post" ? "Post-survey" : "Pre-survey"}</span>
+            <span className="hidden 2xl:inline">{NAV_LABELS[invitation.instance]}</span>
+            <span className="2xl:hidden">{invitation.instance === "post" ? "Post-survey" : "Pre-survey"}</span>
             <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
           </a>
         ) : null)}

@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router';
 import type { UserProfile } from '../types';
 import { storage } from '../lib/storage';
 import { AUTH_BACKEND_CONFIGURED } from '../lib/api/auth-client';
-import { emitProfileUpdated, emitProfileCleared } from '../lib/storage/session-events';
+import { emitProfileUpdated, emitProfileCleared, onSessionEvent } from '../lib/storage/session-events';
 
 /**
  * Source of the last sync operation
@@ -326,6 +326,15 @@ export function useSessionPersistence(): UseSessionPersistenceReturn {
     };
   }, [loadProfile]);
   
+  // Same-tab logout: drop the profile immediately so the navigation bar updates at once.
+  useEffect(() => {
+    return onSessionEvent('profile:cleared', () => {
+      if (!isMountedRef.current) return;
+      setProfile(null);
+      currentProfileRef.current = null;
+    });
+  }, []);
+
   // Listen for storage events (cross-tab sync)
   useEffect(() => {
     // Skip if SSR or localStorage not available

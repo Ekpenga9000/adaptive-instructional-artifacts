@@ -1,3 +1,5 @@
+import { useTextbookUpdates } from '../../../hooks/useTextbookUpdates';
+import { TEXTBOOK_CHANGED_EVENT, isUnitUnseen, markUnitsSeen } from '../../../lib/storage/textbook-updates';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
@@ -114,6 +116,7 @@ export function AdaptiveTextbook({
   const [textbookUnits, setTextbookUnits] = useState<InstructionalUnit[]>([]);
   const [activeUnitId, setActiveUnitId] = useState<string | undefined>(selectedUnitId);
   const selectedUnit = textbookUnits.find(unit => unit.id === activeUnitId) || null;
+  const { seen: seenNotes } = useTextbookUpdates(learnerId);
   const [noteSearch, setNoteSearch] = useState('');
   const [navigatorOpen, setNavigatorOpen] = useState(!selectedUnitId);
   const readerHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -288,6 +291,9 @@ export function AdaptiveTextbook({
   };
 
   const handleUnitSelect = (unit: InstructionalUnit) => {
+    // Opening a note counts as reading it: the My Textbook counter goes down by one.
+    markUnitsSeen(learnerId, [unit]);
+    window.dispatchEvent(new Event(TEXTBOOK_CHANGED_EVENT));
     pendingUnitIdRef.current = unit.id;
     setActiveUnitId(unit.id);
     setNavigatorOpen(false);
@@ -590,6 +596,14 @@ export function AdaptiveTextbook({
                                     <div className="flex items-center gap-2">
                                       <span className="capitalize">{unit.type}</span>
                                       <UnitStatusBadge unit={unit} />
+                                      {isUnitUnseen(unit, seenNotes) && (
+                                        <span
+                                          data-testid="textbook-note-new"
+                                          className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                        >
+                                          New
+                                        </span>
+                                      )}
                                     </div>
                                     <span className="block truncate mt-0.5">{unit.title}</span>
                                     {unit.qualityScore !== undefined && (

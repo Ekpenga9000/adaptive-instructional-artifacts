@@ -234,7 +234,7 @@ describe('HintSystem quota handling', () => {
     expect(screen.queryByText('Guidance Ladder')).toBeNull();
   });
 
-  it('shows only as many hint dots as the learner profile allows (fast escalator = 2)', () => {
+  it('always gives exactly 3 hints, whatever the escalation profile says', () => {
     render(
       <ToastProvider>
         <HintSystem
@@ -246,10 +246,10 @@ describe('HintSystem quota handling', () => {
         />
       </ToastProvider>,
     );
-    expect(screen.getByTestId('hint-counter').textContent).toContain('0/2 hints');
-    expect(screen.getByTestId('hint-dot-2')).toBeTruthy();
-    expect(screen.queryByTestId('hint-dot-3')).toBeNull();
-    expect(screen.getByTestId('hint-once-note').textContent).toContain('You get up to 2 hints');
+    expect(screen.getByTestId('hint-counter').textContent).toContain('0/3 hints');
+    expect(screen.getByTestId('hint-dot-3')).toBeTruthy();
+    expect(screen.queryByTestId('hint-dot-4')).toBeNull();
+    expect(screen.getByTestId('hint-once-note').textContent).toContain('You get 3 hints');
   });
 
   it('once the explanation is used, shows only the hints actually used and says it can come early', () => {

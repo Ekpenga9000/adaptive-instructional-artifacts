@@ -29,26 +29,21 @@ function formatAgo(timestamp: number): string {
  * short quick view with a link to the full My Textbook page.
  */
 export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookUpdatesButtonProps) {
-  const { count, recent, seen, markUnitSeen, markAllSeen } = useTextbookUpdates(learnerId);
+  const { count, recent, seen, markUnitSeen } = useTextbookUpdates(learnerId);
   const location = useLocation();
   const markUnitSeenRef = useRef(markUnitSeen);
   markUnitSeenRef.current = markUnitSeen;
-  const markAllSeenRef = useRef(markAllSeen);
-  markAllSeenRef.current = markAllSeen;
 
-  // Looking at a note counts as seeing it. Opening one note lowers the counter
-  // by one; opening the My Textbook page itself clears the rest.
+  // Opening a note (for example from the quick view, a link with ?unitId=...) counts as
+  // seeing that one note, so the counter goes down by one. Visiting the My Textbook page
+  // does NOT clear the rest: each new note has to be opened.
   useEffect(() => {
     if (location.pathname !== '/textbook') return;
     const unitId = new URLSearchParams(location.search).get('unitId');
     if (unitId) markUnitSeenRef.current(unitId);
-    else markAllSeenRef.current();
   }, [location.pathname, location.search]);
 
-  // No counter on the My Textbook page itself; opening a single note only lowers it by one.
-  const onTextbookPage = location.pathname === '/textbook';
-  const openedSingleNote = onTextbookPage && new URLSearchParams(location.search).has('unitId');
-  const shownCount = onTextbookPage && !openedSingleNote ? 0 : count;
+  const shownCount = count;
   const label = shownCount > 0
     ? `My Textbook notes, ${shownCount} new ${shownCount === 1 ? 'update' : 'updates'}`
     : 'My Textbook notes';
@@ -87,7 +82,6 @@ export function TextbookUpdatesButton({ learnerId, isActive = false }: TextbookU
             <Link
               to="/textbook"
               onClick={() => {
-                markAllSeen();
                 close();
               }}
               className="text-xs font-medium text-blue-700 dark:text-blue-300 hover:underline"

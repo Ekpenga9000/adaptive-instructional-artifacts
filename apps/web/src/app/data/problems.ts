@@ -112,11 +112,14 @@ export const sqlProblems: SQLProblem[] = [
   {
     id: 'problem-1',
     title: 'Select All Users',
-    description: 'Write a query to select all columns from the users table.',
+    description: 'Write a query to select all columns from the users table using the * wildcard.',
     difficulty: 'beginner',
     concepts: ['select-basic'],
     topic: 'basics',
     topicDifficultyLevel: 1,
+    requiredConstructs: [
+      { pattern: 'SELECT\\s+(DISTINCT\\s+)?\\*', label: 'the * wildcard' },
+    ],
     schema: `CREATE TABLE users (
   id INTEGER PRIMARY KEY,
   name TEXT,

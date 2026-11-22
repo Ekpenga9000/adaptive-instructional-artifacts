@@ -468,6 +468,7 @@ export function RootLayout() {
   const isResearchPage = location.pathname === '/research';
   const isInstructorPage = location.pathname === '/instructor-dashboard';
   const isSettingsPage = location.pathname === '/settings';
+  const isAuthEntryPage = location.pathname === '/login' || location.pathname === '/' || location.pathname === '/signup';
   
   const clearScopedUiState = useCallback(() => {
     const actorId = syncedProfile?.id || storage.getUserProfile()?.id;
@@ -639,6 +640,9 @@ export function RootLayout() {
   // Build navigation items based on role
   // When in preview mode, show student navigation even for instructors
   const showStudentNav = !isInstructor || isInPreviewMode;
+  // Survey buttons only exist for a signed-in student. They disappear the moment logout starts
+  // and are never shown on the login / start pages.
+  const showSurveyLinks = isSignedIn && showStudentNav && !isLoggingOut && !isAuthEntryPage;
   const navItems = isSignedIn
     ? (showStudentNav
       ? [
@@ -715,7 +719,7 @@ export function RootLayout() {
               <div className="flex items-center gap-2">
         {/* Mobile menu */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger asChild className="md:hidden">
+          <SheetTrigger asChild className="xl:hidden">
             <Button variant="ghost" size="sm" className="touch-manipulation" aria-label="Open navigation menu">
               <Menu className="size-5" />
             </Button>
@@ -741,11 +745,6 @@ export function RootLayout() {
                     </Link>
                   </Button>
                 ))}
-                {isSignedIn && showStudentNav && (
-                  <div className="px-1 pt-2" onClick={() => setMobileMenuOpen(false)}>
-                    <SurveyInvitationLinks variant="nav" />
-                  </div>
-                )}
               </div>
               <div className="py-4 border-t space-y-2">
                 {isInstructor && (
@@ -775,6 +774,20 @@ export function RootLayout() {
                   >
                     <LogOut className="size-5 mr-3" />
                     <span>{isLoggingOut ? 'Signing Out...' : 'Logout'}</span>
+                  </Button>
+                )}
+                {canOpenWelcome && (
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    className="w-full justify-start touch-manipulation"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowWelcome(true);
+                    }}
+                  >
+                    <HelpCircle className="size-5 mr-3" />
+                    <span>Help</span>
                   </Button>
                 )}
                 <div className="px-2 text-sm text-gray-600 dark:text-gray-300">
@@ -818,7 +831,7 @@ export function RootLayout() {
               </div>
 
               {/* Desktop Navigation */}
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden xl:flex items-center gap-1">
                 {navItems.map((item) => (
                   item.to === '/textbook' && showStudentNav ? (
                     <TextbookUpdatesButton
@@ -848,15 +861,21 @@ export function RootLayout() {
                   </Tooltip>
                   )
                 ))}
-                {isSignedIn && showStudentNav && <SurveyInvitationLinks variant="nav" />}
+                {showSurveyLinks && <SurveyInvitationLinks variant="nav" />}
               </div>
 
               {/* Right side actions */}
               <div className="flex items-center gap-2">
+                {/* Phones, tablets and small laptops: the survey button stays on the bar, everything else is in the menu */}
+                {showSurveyLinks && (
+                  <div className="xl:hidden">
+                    <SurveyInvitationLinks variant="nav" />
+                  </div>
+                )}
                 {canOpenWelcome && (
                   <>
                     {/* Keyboard shortcuts popup - desktop only */}
-                    <div className="hidden lg:block">
+                    <div className="hidden xl:block">
                       <Popover
                         triggerLabel="Keyboard shortcuts"
                         triggerTestId="keyboard-shortcuts-button"
@@ -907,7 +926,7 @@ export function RootLayout() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setShowWelcome(true)}
-                          className="touch-manipulation"
+                          className="touch-manipulation hidden xl:inline-flex"
                           aria-label="Open help and keyboard shortcuts"
                         >
                           <HelpCircle className="size-4 mr-2 hidden sm:block" />
@@ -931,7 +950,7 @@ export function RootLayout() {
                         size="sm"
                         onClick={handleSwitchUser}
                         disabled={isLoggingOut}
-                        className="touch-manipulation hidden md:flex"
+                        className="touch-manipulation hidden xl:flex"
                         aria-label="Switch User"
                       >
                         <Users className="size-4 mr-2 hidden sm:block" />
@@ -954,7 +973,7 @@ export function RootLayout() {
                           size="sm"
                           onClick={(event) => { void handleLogoutClick(event); }}
                           disabled={isLoggingOut || isCheckingLogoutSurvey}
-                          className="touch-manipulation hidden md:flex"
+                          className="touch-manipulation hidden xl:flex"
                           aria-label="Logout"
                         >
                           <LogOut className="size-4 mr-2 hidden sm:block" />
@@ -1007,6 +1026,12 @@ export function RootLayout() {
         >
           <Outlet />
         </main>
+        <div
+          data-testid="build-stamp"
+          className="pointer-events-none fixed bottom-0 left-2 z-10 select-none text-[10px] leading-4 text-gray-400 dark:text-gray-500 hidden lg:block"
+        >
+          Build {typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'local'}
+        </div>
       </div>
     </TooltipProvider>
   );

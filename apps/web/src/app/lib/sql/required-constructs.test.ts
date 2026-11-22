@@ -29,4 +29,12 @@ describe('findMissingConstructs', () => {
       expect(findMissingConstructs(problem.expectedQuery ?? '', problem.requiredConstructs), problem.id).toEqual([]);
     }
   });
+  it('wildcard questions (problems 1 and 8) reject a query that lists the columns instead of *', () => {
+    for (const id of ['problem-1', 'problem-8']) {
+      const problem = problems.find((p) => p.id === id)!;
+      expect(findMissingConstructs('SELECT id, name, email, age FROM users;', problem.requiredConstructs), id).toHaveLength(1);
+      expect(findMissingConstructs('SELECT * FROM users;', problem.requiredConstructs), id).toEqual([]);
+      expect(findMissingConstructs('select  *  from users', problem.requiredConstructs), id).toEqual([]);
+    }
+  });
 });
