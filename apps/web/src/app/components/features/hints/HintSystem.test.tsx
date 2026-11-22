@@ -231,7 +231,7 @@ describe('HintSystem quota handling', () => {
     expect(screen.getByTestId('hint-action-button').textContent).toMatch(/get hint/i);
     expect(screen.getByTestId('hint-counter').textContent).toContain('0/3 hints');
     expect(screen.queryByText('Save to Notes')).toBeNull();
-    expect(screen.queryByText('Guidance Ladder')).toBeNull();
+    expect(screen.getByTestId('hint-panel-title').textContent).toBe('Guidance Ladder');
   });
 
   it('always gives exactly 3 hints, whatever the escalation profile says', () => {

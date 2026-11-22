@@ -1417,8 +1417,8 @@ export function HintSystem({
             <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded-lg shrink-0">
               <Lightbulb className="size-4 text-amber-600 dark:text-amber-300" />
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-              {isInstructor ? 'Guidance Ladder' : 'Hints'}
+            <h3 className="text-sm font-semibold leading-tight text-gray-900 dark:text-gray-100" data-testid="hint-panel-title">
+              Guidance Ladder
             </h3>
           </div>
         <div className="flex shrink-0 items-center gap-2">
